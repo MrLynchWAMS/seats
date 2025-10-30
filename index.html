@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seating Chart Generator</title>
-    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iY3VycmVudENvbG9yIj48cGF0aCBkPSJNNywySDV2M2gxdjJjLTEuMSwwLTIsMC55LTIsMnY2SDJ2MmgydjVIMHYyaDEwdjJIMTRWMmg0djJoMnYtNEMyMiwyLjksMjEuMSwyLDE5LDJ6IE01LDhjMC0wLjYsMC40LTEsMS0xczEsMC40LDEsMVYxMEg1Vjh6IE0xOSwxMGgtMlY4YzAtMC40LDAuNC0xLDEtMXMxLDAuNCwxLDFWMTB6IE0xNSwxOUg5di01aDZWMTh6Ii8+PC9zdmc+">
+    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iY3VycmVudENvbG9yIj48cGF0aCBkPSJNNywySDV2M2gxdjJjLTEuMSwwLTIsMC45LTIsMnY2SDJ2MmgydjVIMHYyaDEwdjJIMTRWMmg0djJoMnYtNEMyMiwyLjksMjEuMSwyLDE5LDJ6IE01LDhjMC0wLjYsMC40LTEsMS0xczEsMC40LDEsMVYxMEg1Vjh6IE0xOSwxMGgtMlY4YzAtMC40LDAuNC0xLDEtMXMxLDAuNCwxLDFWMTB6IE0xNSwxOUg5di01aDZWMTh6Ii8+PC9zdmc+">
     <style>
         /* --- 1. General Styles --- */
         :root {
@@ -186,10 +186,6 @@
             background-color: #5a6268;
         }
         
-        /* FIXED: Separated grid from panel-group */
-        .data-ops-group {
-            /* No grid properties here */
-        }
         .data-ops-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -399,7 +395,7 @@
             z-index: 1001; 
         }
         
-        /* --- 8. MODAL STYLES (Export & Roster) --- */
+        /* --- 8. MODAL STYLES (Roster) --- */
         .modal-overlay {
             display: none; 
             position: fixed;
@@ -433,17 +429,6 @@
             margin-top: 1.5rem;
         }
         
-        /* Export Modal */
-        #export-textarea {
-            width: 100%;
-            height: 200px;
-            font-family: "Courier New", Courier, monospace;
-            font-size: 0.9rem;
-            padding: 0.5rem;
-            box-sizing: border-box;
-            margin-bottom: 1rem;
-        }
-        
         /* Roster Manager Modal */
         #roster-manager-list, #separation-list {
             list-style: none;
@@ -474,125 +459,43 @@
         }
         #separation-list { margin-top: 0.5rem; }
         
-    </style>
-</head>
-<body>
-
-    <header>
-        <h1>Seating Chart</h1>
-        <div class="controls-main">
-            <div class="control-group">
-                <label for="class-selector" style="font-weight: 600;">Class:</label>
-                <select id="class-selector">
-                    <!-- JS will populate this -->
-                </select>
-            </div>
-            <button id="edit-layout-btn">Edit Layout</button>
-            <button id="shuffle-btn">Shuffle Unlocked</button>
-            <button id="clear-assignments-btn" class="danger">Clear All Seats</button>
-        </div>
-    </header>
-
-    <div class="main-container">
+        /* Loading Overlay */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            z-index: 3000;
+            color: #333;
+        }
         
-        <aside class="panel-left">
-            <div class="panel-group roster-group">
-                <h2>Roster</h2>
-                <label for="roster-input">Student Names (One per line)</label>
-                <textarea id="roster-input" placeholder="Student A
-Student B
-Student C..."></textarea>
-                <div class="roster-buttons">
-                    <button id="save-roster-btn">Save Roster</button>
-                    <button id="manage-roster-btn">Manage Roster</button>
-                </div>
-            </div>
-            
-            <div class="panel-group table-settings-group">
-                <h2>Table Settings</h2>
-                <div id="table-toggles">
-                    <!-- JS will populate this -->
-                </div>
-            </div>
-            
-            <div class="panel-group shuffle-options-group">
-                <h2>Shuffle Options</h2>
-                <div>
-                    <input type="checkbox" id="avoid-lonely-check" />
-                    <label for="avoid-lonely-check">Avoid 'lonely' students</label>
-                </div>
-                <button id="check-lonely-btn">Check 'Lonely' Students</button>
-            </div>
-
-            <!-- FIXED: Added .data-ops-grid wrapper -->
-            <div class="panel-group data-ops-group">
-                <h2>App Data</h2>
-                <div class="data-ops-grid">
-                    <button id="export-data-btn">Export Data</button>
-                    <button id="import-data-btn">Import Data</button>
-                    <button id="reset-all-btn" class="danger">Reset All Data</button>
-                </div>
-            </div>
-        </aside>
-
-        <main class="room-container">
-            <!-- Room features are now positioned by JS -->
-            <div id="windows-feature" class="room-feature">WINDOWS</div>
-            <div id="teacher-desk-feature" class="room-feature">Teacher Desk</div>
-            <div id="door-feature" class="room-feature">Door</div>
-
-            <div id="room-layout">
-                <!-- JS will populate tables -->
-            </div>
-        </main>
-    </div>
-    
-    <!-- EXPORT MODAL -->
-    <div id="export-modal-overlay" class="modal-overlay">
-        <div class="modal-content">
-            <h3>Export Your Backup Code</h3>
-            <p>Your entire backup code is highlighted. Just press Ctrl+C (or Cmd+C) to copy.</p>
-            <textarea id="export-textarea" readonly></textarea>
-            <div class="modal-buttons">
-                <button id="close-export-modal-btn">Close</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- ROSTER MANAGER MODAL -->
-    <div id="roster-manager-overlay" class="modal-overlay">
-        <div class="modal-content">
-            <h3>Manage Roster</h3>
-            <p>Assign genders to students for the "Avoid 'lonely' students" shuffle option.</p>
-            <ul id="roster-manager-list">
-                <!-- JS will populate this -->
-            </ul>
-            
-            <h3 style="margin-top: 1.5rem;">Separation List</h3>
-            <p>Students who should not be at the same table.</p>
-            <div id="separation-add-form">
-                <select id="sep-student-1"></select>
-                <select id="sep-student-2"></select>
-                <button id="add-separation-btn">Add</button>
-            </div>
-            <ul id="separation-list">
-                <!-- JS will populate this -->
-            </ul>
-            
-            <div class="modal-buttons">
-                <button id="close-roster-modal-btn">Cancel</button>
-                <button id="save-roster-manager-btn">Save Changes</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-
+    </style>
+    <!-- NEW: Add Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, setLogLevel } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        
         // --- 1. STATE MANAGEMENT ---
         
         let appState = {};
         let draggedStudent = null; 
+        
+        // Firebase Globals
+        let db;
+        let auth;
+        let currentChartId;
+        let chartDocRef;
+        let saveTimeout;
+        let isSaving = false;
+        let isFirstLoad = true;
 
         const getInitialState = () => ({
             activeClassId: 'p1',
@@ -619,81 +522,68 @@ Student C..."></textarea>
             }
         });
 
-        // Load state from browser's local storage
-        function loadState() {
-            const savedState = localStorage.getItem('seatingChartState');
+        // NEW: Load state from Firestore
+        // This is called by the onSnapshot listener
+        function loadState(data) {
             let initialState = getInitialState();
             
-            if (savedState) {
-                try {
-                    appState = JSON.parse(savedState);
-                    
-                    if (!appState.tables || !Array.isArray(appState.tables)) { appState.tables = []; }
-                    if (!appState.classes || typeof appState.classes !== 'object' || Array.isArray(appState.classes)) { appState.classes = {}; }
-                    if (!appState.roomFeatures || typeof appState.roomFeatures !== 'object') {
-                        appState.roomFeatures = initialState.roomFeatures;
-                    }
-
-                } catch (e) {
-                    console.error("Failed to parse saved state, resetting to default.", e);
-                    appState = initialState;
-                }
-
-                // --- Data Migration for Classes ---
-                const oldClassIds = ['p3', 'p4'];
-                const classKeys = Object.keys(appState.classes); 
-                
-                if (oldClassIds.some(id => classKeys.includes(id)) || !classKeys.includes('p8')) {
-                    const oldClasses = appState.classes;
-                    appState.classes = {
-                        'p1': oldClasses.p1 || initialState.classes.p1,
-                        'p2': oldClasses.p2 || initialState.classes.p2,
-                        'p5': oldClasses.p3 || initialState.classes.p5, 
-                        'p7': oldClasses.p4 || initialState.classes.p7, 
-                        'p8': oldClasses.p5 || oldClasses.p8 || initialState.classes.p8  
-                    };
-                    
-                    Object.keys(initialState.classes).forEach(id => {
-                        appState.classes[id].name = initialState.classes[id].name;
-                    });
-                    
-                    if (appState.activeClassId === 'p3') appState.activeClassId = 'p5'; 
-                    else if (appState.activeClassId === 'p4') appState.activeClassId = 'p7';
-                    else if (appState.activeClassId === 'p5' && !oldClasses.p8) appState.activeClassId = 'p8'; 
-                    else if (!appState.classes[appState.activeClassId]) appState.activeClassId = 'p1';
-                }
-                
-                // --- Data Migration for Tables ---
-                initialState.tables.forEach(initTable => {
-                    const existingTable = appState.tables.find(t => t.id === initTable.id);
-                    if (!existingTable) {
-                        appState.tables.push(JSON.parse(JSON.stringify(initTable))); 
-                    } else {
-                        if (existingTable.name.startsWith('Table ')) { existingTable.name = initTable.name; }
-                        if (existingTable.maxSeats !== initTable.maxSeats) { existingTable.maxSeats = initTable.maxSeats; }
-                        if (existingTable.x === undefined || existingTable.y === undefined) {
-                            existingTable.x = initTable.x;
-                            existingTable.y = initTable.y;
-                        }
-                    }
-                });
-                appState.tables = appState.tables.filter(table => 
-                    initialState.tables.some(initTable => initTable.id === table.id)
-                );
-                appState.tables.sort((a, b) => a.id.localeCompare(b.id));
-
-                Object.keys(initialState.roomFeatures).forEach(featureId => {
-                    if (!appState.roomFeatures[featureId] || appState.roomFeatures[featureId].x === undefined) {
-                        appState.roomFeatures[featureId] = initialState.roomFeatures[featureId];
-                    }
-                });
-
-                if (appState.isEditMode === undefined) {
-                    appState.isEditMode = false;
-                }
-
+            if (data) {
+                appState = data;
             } else {
                 appState = initialState;
+            }
+
+            // --- Data Migration for Classes ---
+            const oldClassIds = ['p3', 'p4'];
+            const classKeys = Object.keys(appState.classes); 
+            
+            if (oldClassIds.some(id => classKeys.includes(id)) || !classKeys.includes('p8')) {
+                const oldClasses = appState.classes;
+                appState.classes = {
+                    'p1': oldClasses.p1 || initialState.classes.p1,
+                    'p2': oldClasses.p2 || initialState.classes.p2,
+                    'p5': oldClasses.p3 || initialState.classes.p5, 
+                    'p7': oldClasses.p4 || initialState.classes.p7, 
+                    'p8': oldClasses.p5 || oldClasses.p8 || initialState.classes.p8  
+                };
+                
+                Object.keys(initialState.classes).forEach(id => {
+                    appState.classes[id].name = initialState.classes[id].name;
+                });
+                
+                if (appState.activeClassId === 'p3') appState.activeClassId = 'p5'; 
+                else if (appState.activeClassId === 'p4') appState.activeClassId = 'p7';
+                else if (appState.activeClassId === 'p5' && !oldClasses.p8) appState.activeClassId = 'p8'; 
+                else if (!appState.classes[appState.activeClassId]) appState.activeClassId = 'p1';
+            }
+            
+            // --- Data Migration for Tables ---
+            initialState.tables.forEach(initTable => {
+                const existingTable = appState.tables.find(t => t.id === initTable.id);
+                if (!existingTable) {
+                    appState.tables.push(JSON.parse(JSON.stringify(initTable))); 
+                } else {
+                    if (existingTable.name.startsWith('Table ')) { existingTable.name = initTable.name; }
+                    if (existingTable.maxSeats !== initTable.maxSeats) { existingTable.maxSeats = initTable.maxSeats; }
+                    if (existingTable.x === undefined || existingTable.y === undefined) {
+                        existingTable.x = initTable.x;
+                        existingTable.y = initTable.y;
+                    }
+                }
+            });
+            appState.tables = appState.tables.filter(table => 
+                initialState.tables.some(initTable => initTable.id === table.id)
+            );
+            appState.tables.sort((a, b) => a.id.localeCompare(b.id));
+
+            Object.keys(initialState.roomFeatures).forEach(featureId => {
+                if (!appState.roomFeatures[featureId] || appState.roomFeatures[featureId].x === undefined) {
+                    appState.roomFeatures[featureId] = initialState.roomFeatures[featureId];
+                }
+            });
+
+            if (appState.isEditMode === undefined) {
+                appState.isEditMode = false;
             }
             
             // --- DATA MIGRATION (Roster & Table Settings) ---
@@ -702,37 +592,53 @@ Student C..."></textarea>
                     appState.classes[classId] = initialState.classes[classId];
                 }
                 
-                // 1. Migrate Roster (string[] to object[])
                 if (appState.classes[classId].roster && (appState.classes[classId].roster.length === 0 || typeof appState.classes[classId].roster[0] === 'string')) {
                     appState.classes[classId].roster = appState.classes[classId].roster.map(name => ({ name: name, gender: 'U' }));
                 }
                 
-                // 2. Migrate Table Settings (boolean to object)
                 appState.tables.forEach(table => {
                     const settings = appState.classes[classId].tableSettings;
                     if (settings[table.id] === undefined || typeof settings[table.id] === 'boolean') {
                         const isUsed = settings[table.id] === undefined ? true : settings[table.id];
                         settings[table.id] = {
                             used: isUsed,
-                            maxSeats: table.maxSeats // Default to the table's max
+                            maxSeats: table.maxSeats 
                         };
                     }
                 });
                 
-                // 3. Add separations array if missing
                 if (appState.classes[classId].separations === undefined) {
                     appState.classes[classId].separations = [];
                 }
             }
         }
 
-        // Save state to local storage
+        // NEW: Debounced save to Firestore
         function saveState() {
-            localStorage.setItem('seatingChartState', JSON.stringify(appState));
+            if (isSaving || isFirstLoad) return; // Don't save if already saving or on first load
+            
+            // Clear the old timeout
+            if (saveTimeout) {
+                clearTimeout(saveTimeout);
+            }
+            
+            // Set a new timeout
+            saveTimeout = setTimeout(async () => {
+                isSaving = true;
+                try {
+                    // Use setDoc to overwrite the entire document with the new state
+                    await setDoc(chartDocRef, appState);
+                } catch (error) {
+                    console.error("Error saving state to Firestore:", error);
+                    alert("Error saving changes. Please check your connection.");
+                }
+                isSaving = false;
+            }, 1000); // Save 1 second after the last change
         }
 
         // --- 2. DOM ELEMENT SELECTORS ---
         
+        const loadingOverlay = document.getElementById('loading-overlay');
         const classSelector = document.getElementById('class-selector');
         const editLayoutBtn = document.getElementById('edit-layout-btn'); 
         const rosterInput = document.getElementById('roster-input');
@@ -742,18 +648,12 @@ Student C..."></textarea>
         const clearAssignmentsBtn = document.getElementById('clear-assignments-btn');
         const roomLayout = document.getElementById('room-layout');
         const tableTogglesContainer = document.getElementById('table-toggles');
-        const exportBtn = document.getElementById('export-data-btn');
-        const importBtn = document.getElementById('import-data-btn');
+        const shareBtn = document.getElementById('share-btn'); // Renamed
         const resetAllBtn = document.getElementById('reset-all-btn'); 
         const featureWindows = document.getElementById('windows-feature');
         const featureDesk = document.getElementById('teacher-desk-feature');
         const featureDoor = document.getElementById('door-feature');
         const checkLonelyBtn = document.getElementById('check-lonely-btn'); 
-        
-        // Export Modal
-        const exportModalOverlay = document.getElementById('export-modal-overlay');
-        const exportTextarea = document.getElementById('export-textarea');
-        const closeExportModalBtn = document.getElementById('close-export-modal-btn');
         
         // Roster Modal
         const rosterManagerOverlay = document.getElementById('roster-manager-overlay');
@@ -1085,9 +985,8 @@ Student C..."></textarea>
             }
             
             saveState();
-            // Run checks *after* saving
             checkSeparations(); 
-            checkLonelyStudents(true); // Pass true to suppress "all clear" message
+            checkLonelyStudents(true); 
             render();
         }
 
@@ -1284,62 +1183,22 @@ Student C..."></textarea>
             featureEl.addEventListener('mousedown', onMouseDown);
         }
 
-        // --- 6. DATA EXPORT/IMPORT & RESET ---
+        // --- 6. DATA SHARE & RESET ---
         
-        function handleExport() {
-            try {
-                const jsonState = JSON.stringify(appState);
-                const utf8String = unescape(encodeURIComponent(jsonState));
-                const base64State = btoa(utf8String);
-                
-                exportTextarea.value = base64State;
-                exportModalOverlay.classList.add('modal-visible');
-                exportTextarea.select(); 
-                
-            } catch (error) {
-                alert("Error exporting data: " + error.message);
-            }
+        function handleShare() {
+            prompt("Bookmark or share this unique link:", window.location.href);
         }
         
-        function handleImport() {
-            const base64State = prompt("Please paste your backup code:");
-            if (!base64State) return;
-            
-            try {
-                const utf8String = atob(base64State);
-                const jsonState = decodeURIComponent(escape(utf8String));
-                
-                const newState = JSON.parse(jsonState);
-                
-                if (newState && newState.classes && newState.tables) {
-                    appState = newState;
-                    saveState();
-                    loadState(); 
-                    render();
-                    alert("Data imported successfully!");
-                } else {
-                    alert("Invalid data format.");
-                }
-            } catch (error) {
-                alert("Error importing data. Make sure the entire code was copied correctly. \n\nError: " + error.message);
-            }
-        }
-        
-        function handleResetAll() {
+        async function handleResetAll() {
             if (!confirm('ARE YOU SURE?\n\nThis will erase all your rosters, table positions, and assignments for ALL classes and reset the app to its original state. This cannot be undone.')) {
                 return;
             }
-            localStorage.removeItem('seatingChartState');
             appState = getInitialState(); 
-            saveState(); 
-            loadState(); 
-            render();
+            await setDoc(chartDocRef, appState); // Overwrite cloud data with initial state
+            // onSnapshot will handle the re-render
             alert("App has been reset to its default state.");
         }
         
-        function closeExportModal() {
-            exportModalOverlay.classList.remove('modal-visible');
-        }
 
         // --- 7. ROSTER MANAGER & SHUFFLE CHECKS ---
         
@@ -1409,7 +1268,7 @@ Student C..."></textarea>
                 }
             });
             
-            saveState();
+            saveState(); // Genders and Separations are saved
             closeRosterModal();
             alert('Roster changes saved!');
         }
@@ -1436,7 +1295,7 @@ Student C..."></textarea>
             }
             
             separations.push([name1, name2]);
-            saveState();
+            // Note: No saveState() here. It's saved on "Save Changes"
             renderRosterManagerModal(); 
         }
         
@@ -1451,7 +1310,7 @@ Student C..."></textarea>
                 !((pair[0] === name1 && pair[1] === name2) || (pair[0] === name2 && pair[1] === name1))
             );
             
-            saveState();
+            // Note: No saveState() here. It's saved on "Save Changes"
             renderRosterManagerModal(); 
         }
         
@@ -1459,7 +1318,6 @@ Student C..."></textarea>
             rosterManagerOverlay.classList.remove('modal-visible');
         }
         
-        // Pass 'isAfterShuffle' to suppress the "all clear" message
         function checkLonelyStudents(isAfterShuffle = false) {
             if (!document.getElementById('avoid-lonely-check').checked && !isAfterShuffle) {
                 alert("Please check the \"Avoid 'lonely' students\" box to use this feature.");
@@ -1513,7 +1371,6 @@ Student C..."></textarea>
                 
                 alert(`Warning: The following students are the only one of their gender at their table:\n\n${message}\n\nYou may want to move them manually.`);
             } else if (!isAfterShuffle) {
-                // Only show "all clear" on manual check
                 alert("Gender check complete: No 'lonely' students found!");
             }
         }
@@ -1559,42 +1416,90 @@ Student C..."></textarea>
 
         // --- 8. INITIALIZATION ---
         
-        classSelector.addEventListener('change', handleClassChange);
-        editLayoutBtn.addEventListener('click', handleToggleEditMode); 
-        saveRosterBtn.addEventListener('click', handleSaveRoster);
-        manageRosterBtn.addEventListener('click', handleManageRoster); 
-        shuffleBtn.addEventListener('click', handleShuffle);
-        clearAssignmentsBtn.addEventListener('click', handleClearAssignments);
-        exportBtn.addEventListener('click', handleExport);
-        importBtn.addEventListener('click', handleImport);
-        resetAllBtn.addEventListener('click', handleResetAll); 
-        checkLonelyBtn.addEventListener('click', () => checkLonelyStudents(false)); // NEW
-        
-        // Export Modal Listeners
-        closeExportModalBtn.addEventListener('click', closeExportModal);
-        exportModalOverlay.addEventListener('click', (e) => {
-            if (e.target === exportModalOverlay) closeExportModal();
-        });
-        
-        // Roster Modal Listeners
-        closeRosterModalBtn.addEventListener('click', closeRosterModal);
-        saveRosterManagerBtn.addEventListener('click', handleSaveRosterManager);
-        addSeparationBtn.addEventListener('click', handleAddSeparation);
-        separationList.addEventListener('click', handleRemoveSeparation); 
-        rosterManagerOverlay.addEventListener('click', (e) => {
-            if (e.target === rosterManagerOverlay) closeRosterModal();
-        });
+        // This is the main async function that starts the app
+        async function main() {
+            try {
+                // 1. Initialize Firebase
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                setLogLevel('Debug');
+                
+                // 2. Authenticate
+                if (typeof __initial_auth_token !== 'undefined') {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                // 3. Get or Create Chart ID from URL
+                const urlParams = new URLSearchParams(window.location.search);
+                currentChartId = urlParams.get('id');
+                
+                if (!currentChartId) {
+                    currentChartId = `chart-${crypto.randomUUID().substring(0, 8)}`;
+                    window.history.replaceState({}, '', `?id=${currentChartId}`);
+                }
+                
+                // 4. Set up the Firestore document reference
+                chartDocRef = doc(db, "artifacts", appId, "public/data/seatingCharts", currentChartId);
 
-        // Feature Listeners
-        addFeatureDragListeners(featureWindows, 'windows');
-        addFeatureDragListeners(featureDesk, 'desk');
-        addFeatureDragListeners(featureDoor, 'door');
-        
-        // First load and render
-        loadState();
-        render();
+                // 5. Subscribe to real-time changes
+                onSnapshot(chartDocRef, (doc) => {
+                    if (doc.exists()) {
+                        // Load and migrate data
+                        loadState(doc.data());
+                    } else {
+                        // This is a new chart. Get initial state and save it.
+                        loadState(null); // This sets appState = getInitialState()
+                        saveState(); // This will trigger the snapshot again
+                    }
+                    
+                    // Render the app
+                    render();
+                    
+                    if (isFirstLoad) {
+                        loadingOverlay.style.display = 'none'; // Hide loading screen
+                        isFirstLoad = false;
+                    }
+                });
 
-    });
+                // 6. Attach all event listeners
+                classSelector.addEventListener('change', handleClassChange);
+                editLayoutBtn.addEventListener('click', handleToggleEditMode); 
+                saveRosterBtn.addEventListener('click', handleSaveRoster);
+                manageRosterBtn.addEventListener('click', handleManageRoster); 
+                shuffleBtn.addEventListener('click', handleShuffle);
+                clearAssignmentsBtn.addEventListener('click', handleClearAssignments);
+                shareBtn.addEventListener('click', handleShare);
+                resetAllBtn.addEventListener('click', handleResetAll); 
+                checkLonelyBtn.addEventListener('click', () => checkLonelyStudents(false)); 
+                
+                // Roster Modal Listeners
+                closeRosterModalBtn.addEventListener('click', closeRosterModal);
+                saveRosterManagerBtn.addEventListener('click', handleSaveRosterManager);
+                addSeparationBtn.addEventListener('click', handleAddSeparation);
+                separationList.addEventListener('click', handleRemoveSeparation); 
+                rosterManagerOverlay.addEventListener('click', (e) => {
+                    if (e.target === rosterManagerOverlay) closeRosterModal();
+                });
+
+                // Feature Listeners
+                addFeatureDragListeners(featureWindows, 'windows');
+                addFeatureDragListeners(featureDesk, 'desk');
+                addFeatureDragListeners(featureDoor, 'door');
+                
+            } catch (error) {
+                console.error("Initialization failed:", error);
+                loadingOverlay.textContent = "Error loading app. Please refresh.";
+            }
+        }
+        
+        // Start the application
+        main();
+
     </script>
 </body>
 </html>
