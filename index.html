@@ -186,16 +186,17 @@
             background-color: #5a6268;
         }
         
+        /* Updated data ops grid */
         .data-ops-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 0.5rem;
         }
         #reset-all-btn {
-            grid-column: 1 / -1; 
             background-color: #fff;
             color: var(--danger-color);
             border-color: var(--danger-color);
+            margin-top: 0.5rem; /* Add space */
         }
         #reset-all-btn:hover {
             background-color: var(--danger-color);
@@ -459,43 +460,112 @@
         }
         #separation-list { margin-top: 0.5rem; }
         
-        /* Loading Overlay */
-        #loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            font-weight: 600;
-            z-index: 3000;
-            color: #333;
-        }
-        
     </style>
-    <!-- NEW: Add Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, setLogLevel } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+</head>
+<body>
+
+    <header>
+        <h1>Seating Chart</h1>
+        <div class="controls-main">
+            <div class="control-group">
+                <label for="class-selector" style="font-weight: 600;">Class:</label>
+                <select id="class-selector">
+                    <!-- JS will populate this -->
+                </select>
+            </div>
+            <button id="edit-layout-btn">Edit Layout</button>
+            <button id="shuffle-btn">Shuffle Unlocked</button>
+            <button id="clear-assignments-btn" class="danger">Clear All Seats</button>
+        </div>
+    </header>
+
+    <div class="main-container">
         
+        <aside class="panel-left">
+            <div class="panel-group roster-group">
+                <h2>Roster</h2>
+                <label for="roster-input">Student Names (One per line)</label>
+                <textarea id="roster-input" placeholder="Student A
+Student B
+Student C..."></textarea>
+                <div class="roster-buttons">
+                    <button id="save-roster-btn">Save Roster</button>
+                    <button id="manage-roster-btn">Manage Roster</button>
+                </div>
+            </div>
+            
+            <div class="panel-group table-settings-group">
+                <h2>Table Settings</h2>
+                <div id="table-toggles">
+                    <!-- JS will populate this -->
+                </div>
+            </div>
+            
+            <div class="panel-group shuffle-options-group">
+                <h2>Shuffle Options</h2>
+                <div>
+                    <input type="checkbox" id="avoid-lonely-check" />
+                    <label for="avoid-lonely-check">Avoid 'lonely' students</label>
+                </div>
+                <button id="check-lonely-btn">Check 'Lonely' Students</button>
+            </div>
+
+            <!-- MODIFIED: "Share" button, no Import -->
+            <div class="panel-group data-ops-group">
+                <h2>App Data</h2>
+                <div class="data-ops-grid">
+                    <button id="share-link-btn">Share Link</button>
+                </div>
+                <button id="reset-all-btn" class="danger">Reset All Data</button>
+            </div>
+        </aside>
+
+        <main class="room-container">
+            <div id="windows-feature" class="room-feature">WINDOWS</div>
+            <div id="teacher-desk-feature" class="room-feature">Teacher Desk</div>
+            <div id="door-feature" class="room-feature">Door</div>
+
+            <div id="room-layout">
+                <!-- JS will populate tables -->
+            </div>
+        </main>
+    </div>
+    
+    <!-- ROSTER MANAGER MODAL -->
+    <div id="roster-manager-overlay" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Manage Roster</h3>
+            <p>Assign genders to students for the "Avoid 'lonely' students" shuffle option.</p>
+            <ul id="roster-manager-list">
+                <!-- JS will populate this -->
+            </ul>
+            
+            <h3 style="margin-top: 1.5rem;">Separation List</h3>
+            <p>Students who should not be at the same table.</p>
+            <div id="separation-add-form">
+                <select id="sep-student-1"></select>
+                <select id="sep-student-2"></select>
+                <button id="add-separation-btn">Add</button>
+            </div>
+            <ul id="separation-list">
+                <!-- JS will populate this -->
+            </ul>
+            
+            <div class="modal-buttons">
+                <button id="close-roster-modal-btn">Cancel</button>
+                <button id="save-roster-manager-btn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
         // --- 1. STATE MANAGEMENT ---
         
         let appState = {};
         let draggedStudent = null; 
-        
-        // Firebase Globals
-        let db;
-        let auth;
-        let currentChartId;
-        let chartDocRef;
-        let saveTimeout;
-        let isSaving = false;
-        let isFirstLoad = true;
+        let saveTimeout; // For debouncing URL hash saves
 
         const getInitialState = () => ({
             activeClassId: 'p1',
@@ -522,23 +592,51 @@
             }
         });
 
-        // NEW: Load state from Firestore
-        // This is called by the onSnapshot listener
-        function loadState(data) {
-            let initialState = getInitialState();
-            
-            if (data) {
-                appState = data;
-            } else {
-                appState = initialState;
-            }
+        // NEW: Load state from URL first, then localStorage
+        function loadState() {
+            const initialState = getInitialState();
+            let loadedState = null;
 
-            // --- Data Migration for Classes ---
+            // 1. Try to load from URL hash
+            const hash = window.location.hash.substring(1);
+            if (hash) {
+                try {
+                    const utf8String = atob(hash);
+                    const jsonState = decodeURIComponent(escape(utf8String));
+                    loadedState = JSON.parse(jsonState);
+                    // Save this loaded data to local storage for persistence
+                    localStorage.setItem('seatingChartState', jsonState);
+                } catch (e) {
+                    console.error("Failed to parse state from URL hash. Loading from localStorage.", e);
+                    loadedState = null; // Ensure fallback
+                }
+            }
+            
+            // 2. If URL load failed, try localStorage
+            if (!loadedState) {
+                const savedState = localStorage.getItem('seatingChartState');
+                if (savedState) {
+                    try {
+                        loadedState = JSON.parse(savedState);
+                    } catch (e) {
+                        console.error("Failed to parse state from localStorage. Resetting to default.", e);
+                        loadedState = initialState;
+                    }
+                } else {
+                    loadedState = initialState;
+                }
+            }
+            
+            appState = loadedState;
+
+            // --- Data Migration (run on any loaded data) ---
+            
+            // 1. Migrate Classes
             const oldClassIds = ['p3', 'p4'];
-            const classKeys = Object.keys(appState.classes); 
+            const classKeys = appState.classes ? Object.keys(appState.classes) : [];
             
             if (oldClassIds.some(id => classKeys.includes(id)) || !classKeys.includes('p8')) {
-                const oldClasses = appState.classes;
+                const oldClasses = appState.classes || {};
                 appState.classes = {
                     'p1': oldClasses.p1 || initialState.classes.p1,
                     'p2': oldClasses.p2 || initialState.classes.p2,
@@ -557,7 +655,8 @@
                 else if (!appState.classes[appState.activeClassId]) appState.activeClassId = 'p1';
             }
             
-            // --- Data Migration for Tables ---
+            // 2. Migrate Tables
+            if (!appState.tables) appState.tables = [];
             initialState.tables.forEach(initTable => {
                 const existingTable = appState.tables.find(t => t.id === initTable.id);
                 if (!existingTable) {
@@ -576,6 +675,8 @@
             );
             appState.tables.sort((a, b) => a.id.localeCompare(b.id));
 
+            // 3. Migrate Room Features
+            if (!appState.roomFeatures) appState.roomFeatures = initialState.roomFeatures;
             Object.keys(initialState.roomFeatures).forEach(featureId => {
                 if (!appState.roomFeatures[featureId] || appState.roomFeatures[featureId].x === undefined) {
                     appState.roomFeatures[featureId] = initialState.roomFeatures[featureId];
@@ -586,7 +687,7 @@
                 appState.isEditMode = false;
             }
             
-            // --- DATA MIGRATION (Roster & Table Settings) ---
+            // 4. Migrate Roster & Table Settings for all classes
             for (const classId in initialState.classes) { 
                 if (!appState.classes[classId]) { 
                     appState.classes[classId] = initialState.classes[classId];
@@ -611,34 +712,47 @@
                     appState.classes[classId].separations = [];
                 }
             }
+            
+            // 5. Finaly, update the URL to match the (potentially migrated) state
+            updateURLHash(true); // Force immediate update
         }
 
-        // NEW: Debounced save to Firestore
+        // NEW: Save to both localStorage and URL hash
         function saveState() {
-            if (isSaving || isFirstLoad) return; // Don't save if already saving or on first load
+            // 1. Save to localStorage immediately
+            localStorage.setItem('seatingChartState', JSON.stringify(appState));
             
-            // Clear the old timeout
+            // 2. Debounce the URL hash update
+            updateURLHash(false);
+        }
+
+        // NEW: Function to update the URL hash
+        function updateURLHash(force = false) {
             if (saveTimeout) {
                 clearTimeout(saveTimeout);
             }
             
-            // Set a new timeout
-            saveTimeout = setTimeout(async () => {
-                isSaving = true;
+            const updateAction = () => {
                 try {
-                    // Use setDoc to overwrite the entire document with the new state
-                    await setDoc(chartDocRef, appState);
-                } catch (error) {
-                    console.error("Error saving state to Firestore:", error);
-                    alert("Error saving changes. Please check your connection.");
+                    const jsonState = JSON.stringify(appState);
+                    const utf8String = unescape(encodeURIComponent(jsonState));
+                    const base64State = btoa(utf8String);
+                    // Use replaceState to not clog browser history
+                    window.history.replaceState(null, '', `#${base64State}`);
+                } catch (e) {
+                    console.error("Error updating URL hash:", e);
                 }
-                isSaving = false;
-            }, 1000); // Save 1 second after the last change
+            };
+
+            if (force) {
+                updateAction();
+            } else {
+                saveTimeout = setTimeout(updateAction, 500); // 0.5s debounce
+            }
         }
 
         // --- 2. DOM ELEMENT SELECTORS ---
         
-        const loadingOverlay = document.getElementById('loading-overlay');
         const classSelector = document.getElementById('class-selector');
         const editLayoutBtn = document.getElementById('edit-layout-btn'); 
         const rosterInput = document.getElementById('roster-input');
@@ -648,7 +762,7 @@
         const clearAssignmentsBtn = document.getElementById('clear-assignments-btn');
         const roomLayout = document.getElementById('room-layout');
         const tableTogglesContainer = document.getElementById('table-toggles');
-        const shareBtn = document.getElementById('share-btn'); // Renamed
+        const shareLinkBtn = document.getElementById('share-link-btn'); // NEW
         const resetAllBtn = document.getElementById('reset-all-btn'); 
         const featureWindows = document.getElementById('windows-feature');
         const featureDesk = document.getElementById('teacher-desk-feature');
@@ -671,6 +785,8 @@
         // --- 3. RENDERING FUNCTIONS ---
         
         function render() {
+            if (!appState || !appState.classes) return; // Failsafe
+            
             if (!appState.classes[appState.activeClassId]) {
                 appState.activeClassId = 'p1';
             }
@@ -712,6 +828,7 @@
             
             appState.tables.forEach(table => {
                 const classTableSettings = activeClass.tableSettings[table.id];
+                if (!classTableSettings) return; // Failsafe for migration
                 const seatsToRender = classTableSettings.maxSeats;
                 
                 const tableEl = document.createElement('div');
@@ -788,6 +905,7 @@
             
             appState.tables.forEach(table => {
                 const classTableSettings = activeClass.tableSettings[table.id];
+                if (!classTableSettings) return; // Failsafe for migration
                 
                 const wrapper = document.createElement('div');
                 wrapper.className = 'table-setting-row';
@@ -1185,21 +1303,25 @@
 
         // --- 6. DATA SHARE & RESET ---
         
-        function handleShare() {
+        function handleShareLink() {
+            // First, force a save to make sure the URL is 100% up-to-date
+            updateURLHash(true);
+            // Now, copy the link
             prompt("Bookmark or share this unique link:", window.location.href);
         }
         
-        async function handleResetAll() {
+        function handleResetAll() {
             if (!confirm('ARE YOU SURE?\n\nThis will erase all your rosters, table positions, and assignments for ALL classes and reset the app to its original state. This cannot be undone.')) {
                 return;
             }
+            localStorage.removeItem('seatingChartState');
             appState = getInitialState(); 
-            await setDoc(chartDocRef, appState); // Overwrite cloud data with initial state
-            // onSnapshot will handle the re-render
+            window.history.replaceState(null, '', ' '); // Clear hash
+            saveState(); // Save the fresh state
+            render();
             alert("App has been reset to its default state.");
         }
         
-
         // --- 7. ROSTER MANAGER & SHUFFLE CHECKS ---
         
         function handleManageRoster() {
@@ -1335,6 +1457,7 @@
             const tableGroups = {};
             for (const seatId in assignments) {
                 const studentName = assignments[seatId];
+                if (!studentName) continue; // Skip empty seats
                 const tableId = seatId.split('-s')[0];
                 if (!tableGroups[tableId]) tableGroups[tableId] = [];
                 tableGroups[tableId].push(studentName);
@@ -1385,6 +1508,7 @@
             const studentLocations = {};
             for (const seatId in assignments) {
                 const studentName = assignments[seatId];
+                if (!studentName) continue; // Skip empty seats
                 const tableId = seatId.split('-s')[0];
                 studentLocations[studentName] = tableId;
             }
@@ -1416,90 +1540,36 @@
 
         // --- 8. INITIALIZATION ---
         
-        // This is the main async function that starts the app
-        async function main() {
-            try {
-                // 1. Initialize Firebase
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                const firebaseConfig = JSON.parse(__firebase_config);
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                setLogLevel('Debug');
-                
-                // 2. Authenticate
-                if (typeof __initial_auth_token !== 'undefined') {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-                
-                // 3. Get or Create Chart ID from URL
-                const urlParams = new URLSearchParams(window.location.search);
-                currentChartId = urlParams.get('id');
-                
-                if (!currentChartId) {
-                    currentChartId = `chart-${crypto.randomUUID().substring(0, 8)}`;
-                    window.history.replaceState({}, '', `?id=${currentChartId}`);
-                }
-                
-                // 4. Set up the Firestore document reference
-                chartDocRef = doc(db, "artifacts", appId, "public/data/seatingCharts", currentChartId);
-
-                // 5. Subscribe to real-time changes
-                onSnapshot(chartDocRef, (doc) => {
-                    if (doc.exists()) {
-                        // Load and migrate data
-                        loadState(doc.data());
-                    } else {
-                        // This is a new chart. Get initial state and save it.
-                        loadState(null); // This sets appState = getInitialState()
-                        saveState(); // This will trigger the snapshot again
-                    }
-                    
-                    // Render the app
-                    render();
-                    
-                    if (isFirstLoad) {
-                        loadingOverlay.style.display = 'none'; // Hide loading screen
-                        isFirstLoad = false;
-                    }
-                });
-
-                // 6. Attach all event listeners
-                classSelector.addEventListener('change', handleClassChange);
-                editLayoutBtn.addEventListener('click', handleToggleEditMode); 
-                saveRosterBtn.addEventListener('click', handleSaveRoster);
-                manageRosterBtn.addEventListener('click', handleManageRoster); 
-                shuffleBtn.addEventListener('click', handleShuffle);
-                clearAssignmentsBtn.addEventListener('click', handleClearAssignments);
-                shareBtn.addEventListener('click', handleShare);
-                resetAllBtn.addEventListener('click', handleResetAll); 
-                checkLonelyBtn.addEventListener('click', () => checkLonelyStudents(false)); 
-                
-                // Roster Modal Listeners
-                closeRosterModalBtn.addEventListener('click', closeRosterModal);
-                saveRosterManagerBtn.addEventListener('click', handleSaveRosterManager);
-                addSeparationBtn.addEventListener('click', handleAddSeparation);
-                separationList.addEventListener('click', handleRemoveSeparation); 
-                rosterManagerOverlay.addEventListener('click', (e) => {
-                    if (e.target === rosterManagerOverlay) closeRosterModal();
-                });
-
-                // Feature Listeners
-                addFeatureDragListeners(featureWindows, 'windows');
-                addFeatureDragListeners(featureDesk, 'desk');
-                addFeatureDragListeners(featureDoor, 'door');
-                
-            } catch (error) {
-                console.error("Initialization failed:", error);
-                loadingOverlay.textContent = "Error loading app. Please refresh.";
-            }
-        }
+        // This is now synchronous, no 'main' async function
+        classSelector.addEventListener('change', handleClassChange);
+        editLayoutBtn.addEventListener('click', handleToggleEditMode); 
+        saveRosterBtn.addEventListener('click', handleSaveRoster);
+        manageRosterBtn.addEventListener('click', handleManageRoster); 
+        shuffleBtn.addEventListener('click', handleShuffle);
+        clearAssignmentsBtn.addEventListener('click', handleClearAssignments);
+        shareLinkBtn.addEventListener('click', handleShareLink); // Updated
+        resetAllBtn.addEventListener('click', handleResetAll); 
+        checkLonelyBtn.addEventListener('click', () => checkLonelyStudents(false)); 
         
-        // Start the application
-        main();
+        // Roster Modal Listeners
+        closeRosterModalBtn.addEventListener('click', closeRosterModal);
+        saveRosterManagerBtn.addEventListener('click', handleSaveRosterManager);
+        addSeparationBtn.addEventListener('click', handleAddSeparation);
+        separationList.addEventListener('click', handleRemoveSeparation); 
+        rosterManagerOverlay.addEventListener('click', (e) => {
+            if (e.target === rosterManagerOverlay) closeRosterModal();
+        });
 
+        // Feature Listeners
+        addFeatureDragListeners(featureWindows, 'windows');
+        addFeatureDragListeners(featureDesk, 'desk');
+        addFeatureDragListeners(featureDoor, 'door');
+        
+        // First load and render
+        loadState();
+        render();
+
+    });
     </script>
 </body>
 </html>
