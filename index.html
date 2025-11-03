@@ -30,6 +30,23 @@ href='data:image/svg+xml;utf8,
             --danger-hover: #b02a37;
             --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             --shadow: 0 2px 8px rgba(0,0,0,0.05);
+            
+            /* Text scale and sizing */
+            --text-scale: 1.0;
+            --base-chip-w: 110px;
+            --chip-w: calc(var(--base-chip-w) * var(--text-scale));
+            --chip-gap: calc(0.5rem * var(--text-scale));
+            
+            /* Table widths */
+            --table-w-4: calc(240px * var(--text-scale)); /* 2 columns: 2*110 + gap + padding */
+            --table-w-5: calc(240px * var(--text-scale)); /* 2 columns same as 4-seat */
+            --table-w-5-land: calc(360px * var(--text-scale)); /* 3 columns for Newton */
+            
+            /* Gender colors */
+            --gender-m-bg: #e3f2fd;
+            --gender-m-stripe: #1976d2;
+            --gender-f-bg: #fce4ec;
+            --gender-f-stripe: #c2185b;
         }
         
         body {
@@ -213,7 +230,7 @@ href='data:image/svg+xml;utf8,
         .room-container {
             flex: 1;
             padding: 0; 
-            overflow: hidden; 
+            overflow: auto; /* Changed from hidden to auto for scrolling */
             position: relative; 
             background-image: linear-gradient(to right, #fdfdfd 1px, transparent 1px),
                               linear-gradient(to bottom, #fdfdfd 1px, transparent 1px);
@@ -222,9 +239,9 @@ href='data:image/svg+xml;utf8,
         }
         
         #room-layout {
-            width: 100%;
-            height: 100%;
             position: relative;
+            min-width: 900px;
+            min-height: 700px;
         }
         
         .table {
@@ -235,8 +252,22 @@ href='data:image/svg+xml;utf8,
             padding: 0.5rem; 
             position: absolute; 
             transition: box-shadow 0.2s;
-            min-width: 180px; 
-            max-width: 300px; 
+            box-sizing: border-box;
+        }
+        
+        /* 4-seat tables */
+        .table[data-max-seats="4"] {
+            width: var(--table-w-4);
+        }
+        
+        /* 5-seat tables (portrait) */
+        .table[data-max-seats="5"] {
+            width: var(--table-w-5);
+        }
+        
+        /* Newton (t6) - landscape */
+        .table[data-table-id="t6"] {
+            width: var(--table-w-5-land);
         }
         
         .table.dragging-table {
@@ -252,12 +283,13 @@ href='data:image/svg+xml;utf8,
             border-bottom: 1px dashed var(--border-color);
             padding-bottom: 0.5rem; 
             margin-bottom: 0.75rem; 
-            cursor: default; 
+            cursor: default;
+            font-size: calc(0.95rem * var(--text-scale));
         }
         
         .table-name-input {
             font-family: var(--font-family);
-            font-size: 0.95rem; 
+            font-size: calc(0.95rem * var(--text-scale));
             font-weight: 600;
             border: none;
             padding: 4px;
@@ -270,34 +302,39 @@ href='data:image/svg+xml;utf8,
 
         .seat-container {
             display: grid;
-            grid-template-columns: 1fr 1fr; 
-            gap: 0.5rem; 
+            gap: var(--chip-gap);
         }
         
-        .table[data-max-seats="5"] .seat-container {
-            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); 
-        }
+        /* 4-seat tables: 2-column grid */
         .table[data-max-seats="4"] .seat-container {
             grid-template-columns: 1fr 1fr;
         }
-
-        .table[data-table-id="t6"] {
-            min-width: 270px; /* Make wider to fit 3 seats */
+        
+        /* 5-seat tables (portrait): 2-column grid */
+        .table[data-max-seats="5"] .seat-container {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        /* Newton (t6) landscape: 3-column grid */
+        .table[data-table-id="t6"] .seat-container {
+            grid-template-columns: 1fr 1fr 1fr;
         }
 
         .seat {
             border: 1px solid var(--border-color);
             border-radius: 6px;
-            padding: 0.75rem 0.5rem; 
+            padding: calc(0.75rem * var(--text-scale)) calc(0.5rem * var(--text-scale));
             text-align: center;
-            font-size: 0.85rem; 
+            font-size: calc(0.85rem * var(--text-scale));
             font-weight: 500;
             min-height: 20px;
             user-select: none;
             transition: all 0.2s ease;
             white-space: nowrap; 
             overflow: hidden; 
-            text-overflow: ellipsis; 
+            text-overflow: ellipsis;
+            min-width: 0; /* Allow truncation */
+            width: var(--chip-w);
         }
         
         .seat.empty {
@@ -313,10 +350,27 @@ href='data:image/svg+xml;utf8,
         }
         
         .seat.locked {
-            background-color: var(--seat-locked-bg);
-            border: 2px solid var(--seat-locked-border);
+            border: 2px solid var(--danger-color);
             font-weight: 700;
             color: #b02a37;
+        }
+        
+        /* Gender color coding */
+        .seat.gender-m {
+            background-color: var(--gender-m-bg);
+            border-left: 4px solid var(--gender-m-stripe);
+        }
+        
+        .seat.gender-f {
+            background-color: var(--gender-f-bg);
+            border-left: 4px solid var(--gender-f-stripe);
+        }
+        
+        /* Locked seats with gender colors - keep gender background, add red outline */
+        .seat.locked.gender-m,
+        .seat.locked.gender-f {
+            border: 2px solid var(--danger-color);
+            border-left-width: 4px; /* Preserve the gender stripe */
         }
         
         .seat.dragging {
@@ -480,6 +534,7 @@ href='data:image/svg+xml;utf8,
                 </select>
             </div>
             <button id="edit-layout-btn">Edit Layout</button>
+            <button id="fit-to-screen-btn">Fit to Screen</button>
             <button id="shuffle-btn">Shuffle Unlocked</button>
             <button id="clear-assignments-btn" class="danger">Clear All Seats</button>
         </div>
@@ -514,6 +569,26 @@ Student C..."></textarea>
                     <label for="avoid-lonely-check">Avoid 'lonely' students</label>
                 </div>
                 <button id="check-lonely-btn">Check 'Lonely' Students</button>
+            </div>
+            
+            <div class="panel-group display-options-group">
+                <h2>Display Options</h2>
+                <div style="margin-bottom: 1rem;">
+                    <label for="name-format-select" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Name Format:</label>
+                    <select id="name-format-select" style="width: 100%;">
+                        <option value="full">Full Name</option>
+                        <option value="firstLast">First + Last Initial</option>
+                        <option value="first">First Only</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label for="text-size-slider" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Text Size: <span id="text-size-value">100%</span></label>
+                    <input type="range" id="text-size-slider" min="80" max="130" value="100" style="width: 100%;">
+                </div>
+                <div>
+                    <input type="checkbox" id="color-by-gender-check" />
+                    <label for="color-by-gender-check">Color-code by gender</label>
+                </div>
             </div>
 
             <!-- MODIFIED: "Share" button, no Import -->
@@ -575,7 +650,12 @@ Student C..."></textarea>
 
         const getInitialState = () => ({
             activeClassId: 'p1',
-            isEditMode: false, 
+            isEditMode: false,
+            displayOptions: {
+                nameFormat: 'full',
+                textScale: 100,
+                colorByGender: false
+            },
             classes: {
                 'p1': { name: 'Period 1', roster: [], separations: [], assignments: {}, locked: [], tableSettings: {} },
                 'p2': { name: 'Period 2', roster: [], separations: [], assignments: {}, locked: [], tableSettings: {} },
@@ -693,6 +773,24 @@ Student C..."></textarea>
                 appState.isEditMode = false;
             }
             
+            // Migrate displayOptions
+            if (!appState.displayOptions) {
+                appState.displayOptions = {
+                    nameFormat: 'full',
+                    textScale: 100,
+                    colorByGender: false
+                };
+            }
+            if (appState.displayOptions.nameFormat === undefined) {
+                appState.displayOptions.nameFormat = 'full';
+            }
+            if (appState.displayOptions.textScale === undefined) {
+                appState.displayOptions.textScale = 100;
+            }
+            if (appState.displayOptions.colorByGender === undefined) {
+                appState.displayOptions.colorByGender = false;
+            }
+            
             // 4. Migrate Roster & Table Settings for all classes
             for (const classId in initialState.classes) { 
                 if (!appState.classes[classId]) { 
@@ -761,6 +859,7 @@ Student C..."></textarea>
         
         const classSelector = document.getElementById('class-selector');
         const editLayoutBtn = document.getElementById('edit-layout-btn'); 
+        const fitToScreenBtn = document.getElementById('fit-to-screen-btn');
         const rosterInput = document.getElementById('roster-input');
         const saveRosterBtn = document.getElementById('save-roster-btn');
         const manageRosterBtn = document.getElementById('manage-roster-btn'); 
@@ -773,7 +872,13 @@ Student C..."></textarea>
         const featureWindows = document.getElementById('windows-feature');
         const featureDesk = document.getElementById('teacher-desk-feature');
         const featureDoor = document.getElementById('door-feature');
-        const checkLonelyBtn = document.getElementById('check-lonely-btn'); 
+        const checkLonelyBtn = document.getElementById('check-lonely-btn');
+        
+        // Display Options
+        const nameFormatSelect = document.getElementById('name-format-select');
+        const textSizeSlider = document.getElementById('text-size-slider');
+        const textSizeValue = document.getElementById('text-size-value');
+        const colorByGenderCheck = document.getElementById('color-by-gender-check');
         
         // Roster Modal
         const rosterManagerOverlay = document.getElementById('roster-manager-overlay');
@@ -786,6 +891,44 @@ Student C..."></textarea>
         const sepStudent2 = document.getElementById('sep-student-2');
         const addSeparationBtn = document.getElementById('add-separation-btn');
         const separationList = document.getElementById('separation-list');
+        
+        
+        // --- 2B. HELPER FUNCTIONS ---
+        
+        function formatStudentName(fullName, format) {
+            if (!fullName) return fullName;
+            
+            if (format === 'full') {
+                return fullName;
+            } else if (format === 'firstLast') {
+                const parts = fullName.trim().split(/\s+/);
+                if (parts.length === 1) return parts[0];
+                const firstName = parts[0];
+                const lastInitial = parts[parts.length - 1][0];
+                return `${firstName} ${lastInitial}.`;
+            } else if (format === 'first') {
+                const parts = fullName.trim().split(/\s+/);
+                return parts[0];
+            }
+            return fullName;
+        }
+        
+        function getGenderClass(studentName, activeClass) {
+            if (!appState.displayOptions.colorByGender) return '';
+            
+            const student = activeClass.roster.find(s => s.name === studentName);
+            if (!student) return '';
+            
+            if (student.gender === 'M') return 'gender-m';
+            if (student.gender === 'F') return 'gender-f';
+            return '';
+        }
+        
+        function applyTextScale() {
+            const scale = appState.displayOptions.textScale / 100;
+            document.documentElement.style.setProperty('--text-scale', scale);
+            textSizeValue.textContent = appState.displayOptions.textScale + '%';
+        }
 
 
         // --- 3. RENDERING FUNCTIONS ---
@@ -804,13 +947,20 @@ Student C..."></textarea>
 
             shuffleBtn.disabled = appState.isEditMode;
             clearAssignmentsBtn.disabled = appState.isEditMode;
-            checkLonelyBtn.disabled = appState.isEditMode; 
+            checkLonelyBtn.disabled = appState.isEditMode;
+            
+            // Apply display options
+            applyTextScale();
+            nameFormatSelect.value = appState.displayOptions.nameFormat;
+            textSizeSlider.value = appState.displayOptions.textScale;
+            colorByGenderCheck.checked = appState.displayOptions.colorByGender;
             
             renderClassSelector();
             rosterInput.value = activeClass.roster.map(student => student.name).join('\n');
             renderRoom();
             renderRoomFeatures(); 
             renderTableToggles();
+            updateRoomLayoutSize();
         }
 
         function renderClassSelector() {
@@ -873,10 +1023,17 @@ Student C..."></textarea>
                     seatEl.dataset.seatId = seatId;
                     
                     if (studentName) {
-                        seatEl.textContent = studentName;
+                        const displayName = formatStudentName(studentName, appState.displayOptions.nameFormat);
+                        seatEl.textContent = displayName;
                         seatEl.classList.add('filled');
                         seatEl.draggable = true; 
-                        seatEl.dataset.studentName = studentName; 
+                        seatEl.dataset.studentName = studentName;
+                        
+                        // Add gender class
+                        const genderClass = getGenderClass(studentName, activeClass);
+                        if (genderClass) {
+                            seatEl.classList.add(genderClass);
+                        }
                         
                         if (lockedStudents.includes(studentName)) {
                             seatEl.classList.add('locked');
@@ -943,6 +1100,58 @@ Student C..."></textarea>
                 wrapper.appendChild(label);
                 wrapper.appendChild(select);
                 tableTogglesContainer.appendChild(wrapper);
+            });
+        }
+        
+        function updateRoomLayoutSize() {
+            // Compute the bounding box of all tables and features
+            const tables = document.querySelectorAll('.table');
+            const features = document.querySelectorAll('.room-feature');
+            
+            let maxX = 900; // minimum width
+            let maxY = 700; // minimum height
+            
+            tables.forEach(table => {
+                const rect = table.getBoundingClientRect();
+                const container = document.querySelector('.room-container').getBoundingClientRect();
+                const right = table.offsetLeft + table.offsetWidth;
+                const bottom = table.offsetTop + table.offsetHeight;
+                
+                if (right > maxX) maxX = right;
+                if (bottom > maxY) maxY = bottom;
+            });
+            
+            features.forEach(feature => {
+                const right = feature.offsetLeft + feature.offsetWidth;
+                const bottom = feature.offsetTop + feature.offsetHeight;
+                
+                if (right > maxX) maxX = right;
+                if (bottom > maxY) maxY = bottom;
+            });
+            
+            // Add padding
+            roomLayout.style.width = (maxX + 100) + 'px';
+            roomLayout.style.height = (maxY + 100) + 'px';
+        }
+        
+        function handleFitToScreen() {
+            const roomContainer = document.querySelector('.room-container');
+            const roomLayout = document.getElementById('room-layout');
+            
+            // Center the room layout within the container
+            const containerWidth = roomContainer.clientWidth;
+            const containerHeight = roomContainer.clientHeight;
+            const layoutWidth = roomLayout.offsetWidth;
+            const layoutHeight = roomLayout.offsetHeight;
+            
+            // Calculate scroll positions to center the layout
+            const scrollLeft = Math.max(0, (layoutWidth - containerWidth) / 2);
+            const scrollTop = Math.max(0, (layoutHeight - containerHeight) / 2);
+            
+            roomContainer.scrollTo({
+                left: scrollLeft,
+                top: scrollTop,
+                behavior: 'smooth'
             });
         }
 
@@ -1048,6 +1257,24 @@ Student C..."></textarea>
                     }
                 }
             }
+            saveState();
+            render();
+        }
+        
+        function handleNameFormatChange(e) {
+            appState.displayOptions.nameFormat = e.target.value;
+            saveState();
+            render();
+        }
+        
+        function handleTextSizeChange(e) {
+            appState.displayOptions.textScale = parseInt(e.target.value, 10);
+            saveState();
+            render();
+        }
+        
+        function handleColorByGenderChange(e) {
+            appState.displayOptions.colorByGender = e.target.checked;
             saveState();
             render();
         }
@@ -1549,13 +1776,19 @@ Student C..."></textarea>
         // This is now synchronous, no 'main' async function
         classSelector.addEventListener('change', handleClassChange);
         editLayoutBtn.addEventListener('click', handleToggleEditMode); 
+        fitToScreenBtn.addEventListener('click', handleFitToScreen);
         saveRosterBtn.addEventListener('click', handleSaveRoster);
         manageRosterBtn.addEventListener('click', handleManageRoster); 
         shuffleBtn.addEventListener('click', handleShuffle);
         clearAssignmentsBtn.addEventListener('click', handleClearAssignments);
         shareLinkBtn.addEventListener('click', handleShareLink); // Updated
         resetAllBtn.addEventListener('click', handleResetAll); 
-        checkLonelyBtn.addEventListener('click', () => checkLonelyStudents(false)); 
+        checkLonelyBtn.addEventListener('click', () => checkLonelyStudents(false));
+        
+        // Display Options Listeners
+        nameFormatSelect.addEventListener('change', handleNameFormatChange);
+        textSizeSlider.addEventListener('input', handleTextSizeChange);
+        colorByGenderCheck.addEventListener('change', handleColorByGenderChange);
         
         // Roster Modal Listeners
         closeRosterModalBtn.addEventListener('click', closeRosterModal);
