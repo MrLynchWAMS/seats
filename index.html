@@ -501,6 +501,25 @@ href='data:image/svg+xml;utf8,
             border-color: #999;
         }
         
+        /* Color picker for furniture */
+        .feature-color-picker {
+            display: none;
+            position: absolute;
+            bottom: 4px;
+            left: 4px;
+            width: 30px;
+            height: 30px;
+            border: 2px solid #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+        
+        body.layout-edit-mode .feature-color-picker {
+            display: block;
+        }
+        
         /* Removed old individual feature IDs */
 
         /* --- 7. EDIT MODE STYLES --- */
@@ -534,6 +553,12 @@ href='data:image/svg+xml;utf8,
         }
         body.layout-edit-mode .room-feature-close {
             display: flex;
+        }
+        
+        /* Make tables resizable in edit mode */
+        body.layout-edit-mode .table {
+            resize: both;
+            overflow: auto;
         }
         
         /* --- 8. MODAL STYLES (Roster) --- */
@@ -724,6 +749,15 @@ Student C..."></textarea>
 
         // --- 1. STATE MANAGEMENT ---
         
+        // Default colors for furniture types
+        const FEATURE_DEFAULT_COLORS = {
+            'windows': '#ADD8E6',
+            'desk': '#C49A6C',
+            'smartboard': '#FFFFFF',
+            'door': '#FFB6C1',
+            'generic': '#CCCCCC'
+        };
+        
         let appState = {};
         let draggedStudent = null; 
         let saveTimeout; // For debouncing URL hash saves
@@ -842,10 +876,10 @@ Student C..."></textarea>
             
             // Define default furniture with full properties
             const defaultFurniture = {
-                'windows': { id: 'windows', name: 'WINDOWS', type: 'windows', x: 20, y: 100, w: 60, h: 400 },
-                'desk': { id: 'desk', name: 'Teacher Desk', type: 'desk', x: 50, y: 550, w: 150, h: 60 },
-                'smartboard': { id: 'smartboard', name: 'Smartboard', type: 'smartboard', x: 250, y: 400, w: 150, h: 40 },
-                'door': { id: 'door', name: 'Door', type: 'door', x: 750, y: 500, w: 80, h: 120 }
+                'windows': { id: 'windows', name: 'WINDOWS', type: 'windows', x: 20, y: 100, w: 60, h: 400, color: FEATURE_DEFAULT_COLORS.windows },
+                'desk': { id: 'desk', name: 'Teacher Desk', type: 'desk', x: 50, y: 550, w: 150, h: 60, color: FEATURE_DEFAULT_COLORS.desk },
+                'smartboard': { id: 'smartboard', name: 'Smartboard', type: 'smartboard', x: 250, y: 400, w: 150, h: 40, color: FEATURE_DEFAULT_COLORS.smartboard },
+                'door': { id: 'door', name: 'Door', type: 'door', x: 750, y: 500, w: 80, h: 120, color: FEATURE_DEFAULT_COLORS.door }
             };
             
             // Check if we need to migrate from old structure (just x/y) to new structure (id, name, type, x, y, w, h)
@@ -866,7 +900,8 @@ Student C..."></textarea>
                             x: oldFeature.x !== undefined ? oldFeature.x : defaultFeature.x,
                             y: oldFeature.y !== undefined ? oldFeature.y : defaultFeature.y,
                             w: oldFeature.w || defaultFeature.w,
-                            h: oldFeature.h || defaultFeature.h
+                            h: oldFeature.h || defaultFeature.h,
+                            color: oldFeature.color || defaultFeature.color
                         };
                     }
                 }
@@ -876,6 +911,14 @@ Student C..."></textarea>
             // Initialize default furniture if none exists
             if (Object.keys(appState.roomFeatures).length === 0) {
                 appState.roomFeatures = JSON.parse(JSON.stringify(defaultFurniture));
+            }
+            
+            // Ensure all existing furniture has a color property
+            for (const featureId in appState.roomFeatures) {
+                const feature = appState.roomFeatures[featureId];
+                if (!feature.color) {
+                    feature.color = FEATURE_DEFAULT_COLORS[feature.type] || FEATURE_DEFAULT_COLORS.generic;
+                }
             }
 
             if (appState.isEditMode === undefined) {
@@ -1140,6 +1183,14 @@ Student C..."></textarea>
                 tableEl.style.left = table.x + 'px';
                 tableEl.style.top = table.y + 'px';
                 
+                // Apply saved width and height if available
+                if (table.w) {
+                    tableEl.style.width = table.w + 'px';
+                }
+                if (table.h) {
+                    tableEl.style.height = table.h + 'px';
+                }
+                
                 const tableHeader = document.createElement('div');
                 tableHeader.className = 'table-header';
                 
@@ -1155,6 +1206,7 @@ Student C..."></textarea>
                 tableEl.appendChild(tableHeader);
 
                 addTableDragListeners(tableEl, tableHeader, table);
+                attachTableResizeObserver(tableEl, table.id);
 
                 const seatContainer = document.createElement('div');
                 seatContainer.className = 'seat-container';
@@ -1216,6 +1268,11 @@ Student C..."></textarea>
                 featureEl.style.width = feature.w + 'px';
                 featureEl.style.height = feature.h + 'px';
                 
+                // Apply saved color
+                if (feature.color) {
+                    featureEl.style.backgroundColor = feature.color;
+                }
+                
                 // Title (contenteditable in edit mode)
                 const titleEl = document.createElement('div');
                 titleEl.className = 'room-feature-title';
@@ -1237,6 +1294,22 @@ Student C..."></textarea>
                     }
                 });
                 featureEl.appendChild(titleEl);
+                
+                // Color picker (visible only in edit mode)
+                const colorPicker = document.createElement('input');
+                colorPicker.type = 'color';
+                colorPicker.className = 'feature-color-picker';
+                colorPicker.value = feature.color || FEATURE_DEFAULT_COLORS[feature.type] || FEATURE_DEFAULT_COLORS.generic;
+                colorPicker.addEventListener('input', (e) => {
+                    const newColor = e.target.value;
+                    feature.color = newColor;
+                    featureEl.style.backgroundColor = newColor;
+                    saveState();
+                });
+                colorPicker.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent dragging when clicking color picker
+                });
+                featureEl.appendChild(colorPicker);
                 
                 // Close button (visible only in edit mode)
                 const closeBtn = document.createElement('button');
@@ -1814,6 +1887,38 @@ Student C..."></textarea>
             
             resizeObserver.observe(featureEl);
         }
+        
+        function attachTableResizeObserver(tableEl, tableId) {
+            if (!window.ResizeObserver) return; // Fallback for older browsers
+            
+            let resizeTimeout;
+            
+            const resizeObserver = new ResizeObserver(entries => {
+                if (!appState.isEditMode) return;
+                
+                // Debounce the resize to avoid excessive saves
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    for (const entry of entries) {
+                        // Use offsetWidth/offsetHeight which gives actual pixel dimensions
+                        const newWidth = tableEl.offsetWidth;
+                        const newHeight = tableEl.offsetHeight;
+                        
+                        const table = appState.tables.find(t => t.id === tableId);
+                        if (!table) return;
+                        
+                        // Only update if changed
+                        if (table.w !== newWidth || table.h !== newHeight) {
+                            table.w = newWidth;
+                            table.h = newHeight;
+                            saveState();
+                        }
+                    }
+                }, 150); // 150ms debounce
+            });
+            
+            resizeObserver.observe(tableEl);
+        }
 
         function handleAddFurniture() {
             // Generate a unique ID for the new furniture
@@ -1831,7 +1936,8 @@ Student C..."></textarea>
                 x: 300,
                 y: 300,
                 w: 120,
-                h: 80
+                h: 80,
+                color: FEATURE_DEFAULT_COLORS.generic
             };
             
             saveState();
