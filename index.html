@@ -384,6 +384,12 @@ href='data:image/svg+xml;utf8,
         }
         
         /* --- 6. Room Features --- */
+        #room-features {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        
         .room-feature {
             position: absolute;
             background-color: rgba(200, 200, 200, 0.2);
@@ -395,10 +401,52 @@ href='data:image/svg+xml;utf8,
             font-size: 0.9rem;
             pointer-events: none; 
             user-select: none;
-            box-sizing: border-box; 
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
         
-        #windows-feature {
+        .room-feature-title {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            outline: none;
+            border: none;
+            background: transparent;
+            font-weight: 600;
+            color: inherit;
+            text-align: center;
+            word-break: break-word;
+        }
+        
+        .room-feature-close {
+            display: none;
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 20px;
+            height: 20px;
+            background-color: var(--danger-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            padding: 0;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        .room-feature-close:hover {
+            background-color: var(--danger-hover);
+        }
+        
+        /* Type-specific styles */
+        .room-feature.type-windows {
             width: 60px; 
             height: 400px; 
             padding: 1rem 0.75rem;
@@ -409,33 +457,41 @@ href='data:image/svg+xml;utf8,
             border-color: #add8e6;
             writing-mode: vertical-rl; 
             text-orientation: mixed;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
-        #teacher-desk-feature {
+        
+        .room-feature.type-desk {
             width: 150px;
+            height: 60px;
             text-align: center;
             background-color: rgba(139, 69, 19, 0.3);
             border-color: #8b4513;
         }
-            #smartboard-feature {
+        
+        .room-feature.type-smartboard {
             width: 150px;
+            height: 40px;
             text-align: center;
             background-color: rgba(255, 255, 255, 1);
             border-color: #8b4513;
         }
-        #door-feature {
+        
+        .room-feature.type-door {
             width: 80px;
             height: 120px;
             writing-mode: vertical-rl;
             text-orientation: mixed;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             background-color: rgba(255, 182, 193, 0.4);
             border-color: #ffb6c1;
         }
+        
+        .room-feature.type-generic {
+            width: 120px;
+            height: 80px;
+            background-color: rgba(200, 200, 200, 0.3);
+            border-color: #999;
+        }
+        
+        /* Removed old individual feature IDs */
 
         /* --- 7. EDIT MODE STYLES --- */
         
@@ -454,12 +510,20 @@ href='data:image/svg+xml;utf8,
         body.layout-edit-mode .room-feature {
             pointer-events: all;
             cursor: grab;
-            border: 2px solid var(--danger-color);
-            z-index: 999; 
+            border: 2px solid var(--accent-color);
+            z-index: 999;
+            resize: both;
+            overflow: auto;
         }
         body.layout-edit-mode .room-feature:active {
             cursor: grabbing;
             z-index: 1001; 
+        }
+        body.layout-edit-mode .room-feature-title {
+            cursor: text;
+        }
+        body.layout-edit-mode .room-feature-close {
+            display: flex;
         }
         
         /* --- 8. MODAL STYLES (Roster) --- */
@@ -540,6 +604,7 @@ href='data:image/svg+xml;utf8,
                 </select>
             </div>
             <button id="edit-layout-btn">Edit Layout</button>
+            <button id="add-furniture-btn" style="display: none;">Add Furniture</button>
             <button id="fit-to-screen-btn">Fit to Screen</button>
             <button id="shuffle-btn">Shuffle Unlocked</button>
             <button id="clear-assignments-btn" class="danger">Clear All Seats</button>
@@ -608,12 +673,10 @@ Student C..."></textarea>
         </aside>
 
         <main class="room-container">
-            <div id="windows-feature" class="room-feature">WINDOWS</div>
-            <div id="teacher-desk-feature" class="room-feature">Teacher Desk</div>
-            <div id="smartboard-feature" class="room-feature">Smartboard</div>
-            <div id="door-feature" class="room-feature">Door</div>
-
             <div id="room-layout">
+                <div id="room-features">
+                    <!-- JS will populate furniture items -->
+                </div>
                 <!-- JS will populate tables -->
             </div>
         </main>
@@ -678,12 +741,7 @@ Student C..."></textarea>
                 { id: 't5', name: 'Ochoa',    maxSeats: 5, x: 550, y: 500 },
                 { id: 't6', name: 'Newton',   maxSeats: 5, x: 340, y: 400 },
             ],
-            roomFeatures: { 
-                'windows': { x: 20, y: 100 }, 
-                'desk': { x: 50, y: 550 },
-                'smartboard': { x:250, y: 400 },
-                'door': { x: 750, y: 500 }
-            }
+            roomFeatures: {}
         });
 
         // NEW: Load state from URL first, then localStorage
@@ -769,13 +827,46 @@ Student C..."></textarea>
             );
             appState.tables.sort((a, b) => a.id.localeCompare(b.id));
 
-            // 3. Migrate Room Features
-            if (!appState.roomFeatures) appState.roomFeatures = initialState.roomFeatures;
-            Object.keys(initialState.roomFeatures).forEach(featureId => {
-                if (!appState.roomFeatures[featureId] || appState.roomFeatures[featureId].x === undefined) {
-                    appState.roomFeatures[featureId] = initialState.roomFeatures[featureId];
+            // 3. Migrate Room Features to new structure
+            if (!appState.roomFeatures) appState.roomFeatures = {};
+            
+            // Define default furniture with full properties
+            const defaultFurniture = {
+                'windows': { id: 'windows', name: 'WINDOWS', type: 'windows', x: 20, y: 100, w: 60, h: 400 },
+                'desk': { id: 'desk', name: 'Teacher Desk', type: 'desk', x: 50, y: 550, w: 150, h: 60 },
+                'smartboard': { id: 'smartboard', name: 'Smartboard', type: 'smartboard', x: 250, y: 400, w: 150, h: 40 },
+                'door': { id: 'door', name: 'Door', type: 'door', x: 750, y: 500, w: 80, h: 120 }
+            };
+            
+            // Check if we need to migrate from old structure (just x/y) to new structure (id, name, type, x, y, w, h)
+            const needsMigration = Object.keys(appState.roomFeatures).length > 0 && 
+                                   Object.values(appState.roomFeatures).some(f => !f.id || !f.name || !f.type);
+            
+            if (needsMigration) {
+                // Migrate old roomFeatures to new structure
+                const migratedFeatures = {};
+                for (const featureId in appState.roomFeatures) {
+                    const oldFeature = appState.roomFeatures[featureId];
+                    const defaultFeature = defaultFurniture[featureId];
+                    if (defaultFeature) {
+                        migratedFeatures[featureId] = {
+                            id: featureId,
+                            name: defaultFeature.name,
+                            type: defaultFeature.type,
+                            x: oldFeature.x !== undefined ? oldFeature.x : defaultFeature.x,
+                            y: oldFeature.y !== undefined ? oldFeature.y : defaultFeature.y,
+                            w: oldFeature.w || defaultFeature.w,
+                            h: oldFeature.h || defaultFeature.h
+                        };
+                    }
                 }
-            });
+                appState.roomFeatures = migratedFeatures;
+            }
+            
+            // Initialize default furniture if none exists
+            if (Object.keys(appState.roomFeatures).length === 0) {
+                appState.roomFeatures = JSON.parse(JSON.stringify(defaultFurniture));
+            }
 
             if (appState.isEditMode === undefined) {
                 appState.isEditMode = false;
@@ -867,6 +958,7 @@ Student C..."></textarea>
         
         const classSelector = document.getElementById('class-selector');
         const editLayoutBtn = document.getElementById('edit-layout-btn'); 
+        const addFurnitureBtn = document.getElementById('add-furniture-btn');
         const fitToScreenBtn = document.getElementById('fit-to-screen-btn');
         const rosterInput = document.getElementById('roster-input');
         const saveRosterBtn = document.getElementById('save-roster-btn');
@@ -874,13 +966,10 @@ Student C..."></textarea>
         const shuffleBtn = document.getElementById('shuffle-btn');
         const clearAssignmentsBtn = document.getElementById('clear-assignments-btn');
         const roomLayout = document.getElementById('room-layout');
+        const roomFeaturesContainer = document.getElementById('room-features');
         const tableTogglesContainer = document.getElementById('table-toggles');
         const shareLinkBtn = document.getElementById('share-link-btn'); // NEW
         const resetAllBtn = document.getElementById('reset-all-btn'); 
-        const featureWindows = document.getElementById('windows-feature');
-        const featureDesk = document.getElementById('teacher-desk-feature');
-        const featureSmartboard = document.getElementById('smartboard-feature');    
-        const featureDoor = document.getElementById('door-feature');
         const checkLonelyBtn = document.getElementById('check-lonely-btn');
         
         // Display Options
@@ -953,6 +1042,9 @@ Student C..."></textarea>
             document.body.classList.toggle('layout-edit-mode', appState.isEditMode);
             editLayoutBtn.textContent = appState.isEditMode ? 'Save Layout' : 'Edit Layout';
             editLayoutBtn.classList.toggle('danger', appState.isEditMode);
+            
+            // Show/hide Add Furniture button based on edit mode
+            addFurnitureBtn.style.display = appState.isEditMode ? 'inline-block' : 'none';
 
             shuffleBtn.disabled = appState.isEditMode;
             clearAssignmentsBtn.disabled = appState.isEditMode;
@@ -1062,14 +1154,64 @@ Student C..."></textarea>
         }
         
         function renderRoomFeatures() {
-            const features = appState.roomFeatures;
-            featureWindows.style.left = features['windows'].x + 'px';
-            featureWindows.style.top = features['windows'].y + 'px';
-            featureDesk.style.left = features['desk'].x + 'px';
-            featureDesk.style.top = features['desk'].y + 'px';
-            featureDoor.style.left = features['door'].x + 'px';
-            featureDoor.style.top = features['door'].y + 'px';
-            featureSmartboard.style.top = features['smartboard'].y + 'px';
+            if (!roomFeaturesContainer) return;
+            
+            roomFeaturesContainer.innerHTML = '';
+            
+            for (const featureId in appState.roomFeatures) {
+                const feature = appState.roomFeatures[featureId];
+                
+                const featureEl = document.createElement('div');
+                featureEl.className = 'room-feature';
+                featureEl.classList.add(`type-${feature.type}`);
+                featureEl.dataset.featureId = featureId;
+                featureEl.style.left = feature.x + 'px';
+                featureEl.style.top = feature.y + 'px';
+                featureEl.style.width = feature.w + 'px';
+                featureEl.style.height = feature.h + 'px';
+                
+                // Title (contenteditable in edit mode)
+                const titleEl = document.createElement('div');
+                titleEl.className = 'room-feature-title';
+                titleEl.textContent = feature.name;
+                titleEl.contentEditable = appState.isEditMode;
+                titleEl.addEventListener('blur', (e) => {
+                    const newName = e.target.textContent.trim();
+                    if (newName && newName !== feature.name) {
+                        feature.name = newName;
+                        saveState();
+                    } else if (!newName) {
+                        e.target.textContent = feature.name; // Revert if empty
+                    }
+                });
+                titleEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.target.blur();
+                    }
+                });
+                featureEl.appendChild(titleEl);
+                
+                // Close button (visible only in edit mode)
+                const closeBtn = document.createElement('button');
+                closeBtn.className = 'room-feature-close';
+                closeBtn.textContent = '×';
+                closeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (confirm(`Remove ${feature.name}?`)) {
+                        delete appState.roomFeatures[featureId];
+                        saveState();
+                        render();
+                    }
+                });
+                featureEl.appendChild(closeBtn);
+                
+                // Add drag and resize listeners
+                addFeatureDragListeners(featureEl, featureId);
+                addFeatureResizeListener(featureEl, featureId);
+                
+                roomFeaturesContainer.appendChild(featureEl);
+            }
         }
         
         function renderTableToggles() {
@@ -1500,10 +1642,17 @@ Student C..."></textarea>
             function onMouseDown(e) {
                 if (!appState.isEditMode || e.button !== 0) return;
                 
+                // Don't drag if clicking on close button or title
+                if (e.target.classList.contains('room-feature-close') || 
+                    e.target.classList.contains('room-feature-title')) {
+                    return;
+                }
+                
                 isDragging = true;
                 featureEl.style.zIndex = 1001; 
                 
                 const rect = featureEl.getBoundingClientRect();
+                const roomRect = room.getBoundingClientRect();
                 offsetX = e.clientX - rect.left;
                 offsetY = e.clientY - rect.top;
 
@@ -1517,11 +1666,14 @@ Student C..."></textarea>
                 if (!isDragging) return;
                 
                 const roomRect = room.getBoundingClientRect();
-                let newX = e.clientX - roomRect.left - offsetX;
-                let newY = e.clientY - roomRect.top - offsetY;
+                const roomLayout = document.getElementById('room-layout');
+                const roomLayoutRect = roomLayout.getBoundingClientRect();
                 
-                newX = Math.max(0, Math.min(newX, roomRect.width - featureEl.offsetWidth));
-                newY = Math.max(0, Math.min(newY, roomRect.height - featureEl.offsetHeight));
+                let newX = e.clientX - roomLayoutRect.left - offsetX + room.scrollLeft;
+                let newY = e.clientY - roomLayoutRect.top - offsetY + room.scrollTop;
+                
+                newX = Math.max(0, newX);
+                newY = Math.max(0, newY);
                 
                 appState.roomFeatures[featureId].x = newX;
                 appState.roomFeatures[featureId].y = newY;
@@ -1543,7 +1695,52 @@ Student C..."></textarea>
 
             featureEl.addEventListener('mousedown', onMouseDown);
         }
+        
+        function addFeatureResizeListener(featureEl, featureId) {
+            if (!window.ResizeObserver) return; // Fallback for older browsers
+            
+            const resizeObserver = new ResizeObserver(entries => {
+                if (!appState.isEditMode) return;
+                
+                for (const entry of entries) {
+                    const newWidth = Math.round(entry.contentRect.width);
+                    const newHeight = Math.round(entry.contentRect.height);
+                    
+                    const feature = appState.roomFeatures[featureId];
+                    if (feature && (feature.w !== newWidth || feature.h !== newHeight)) {
+                        feature.w = newWidth;
+                        feature.h = newHeight;
+                        saveState();
+                    }
+                }
+            });
+            
+            resizeObserver.observe(featureEl);
+        }
 
+        function handleAddFurniture() {
+            // Generate a unique ID for the new furniture
+            let id = 1;
+            while (appState.roomFeatures[`furniture-${id}`]) {
+                id++;
+            }
+            const newId = `furniture-${id}`;
+            
+            // Add new furniture at a default position
+            appState.roomFeatures[newId] = {
+                id: newId,
+                name: 'Furniture',
+                type: 'generic',
+                x: 300,
+                y: 300,
+                w: 120,
+                h: 80
+            };
+            
+            saveState();
+            render();
+        }
+        
         // --- 6. DATA SHARE & RESET ---
         
         function handleShareLink() {
@@ -1786,6 +1983,7 @@ Student C..."></textarea>
         // This is now synchronous, no 'main' async function
         classSelector.addEventListener('change', handleClassChange);
         editLayoutBtn.addEventListener('click', handleToggleEditMode); 
+        addFurnitureBtn.addEventListener('click', handleAddFurniture);
         fitToScreenBtn.addEventListener('click', handleFitToScreen);
         saveRosterBtn.addEventListener('click', handleSaveRoster);
         manageRosterBtn.addEventListener('click', handleManageRoster); 
@@ -1808,12 +2006,6 @@ Student C..."></textarea>
         rosterManagerOverlay.addEventListener('click', (e) => {
             if (e.target === rosterManagerOverlay) closeRosterModal();
         });
-
-        // Feature Listeners
-        addFeatureDragListeners(featureWindows, 'windows');
-        addFeatureDragListeners(featureDesk, 'desk');
-        addFeatureDragListeners(featureDoor, 'door');
-        addFeatureDragListeners(featureSmartboard, 'smartboard');
         
         // First load and render
         loadState();
