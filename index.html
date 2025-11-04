@@ -449,6 +449,8 @@ href='data:image/svg+xml;utf8,
         .room-feature.type-windows {
             width: 60px; 
             height: 400px; 
+            min-width: 40px;
+            min-height: 120px;
             padding: 1rem 0.75rem;
             text-align: center;
             font-size: 1.1rem;
@@ -462,6 +464,8 @@ href='data:image/svg+xml;utf8,
         .room-feature.type-desk {
             width: 150px;
             height: 60px;
+            min-width: 80px;
+            min-height: 40px;
             text-align: center;
             background-color: rgba(139, 69, 19, 0.3);
             border-color: #8b4513;
@@ -470,6 +474,8 @@ href='data:image/svg+xml;utf8,
         .room-feature.type-smartboard {
             width: 150px;
             height: 40px;
+            min-width: 80px;
+            min-height: 30px;
             text-align: center;
             background-color: rgba(255, 255, 255, 1);
             border-color: #8b4513;
@@ -478,6 +484,8 @@ href='data:image/svg+xml;utf8,
         .room-feature.type-door {
             width: 80px;
             height: 120px;
+            min-width: 40px;
+            min-height: 60px;
             writing-mode: vertical-rl;
             text-orientation: mixed;
             background-color: rgba(255, 182, 193, 0.4);
@@ -487,6 +495,8 @@ href='data:image/svg+xml;utf8,
         .room-feature.type-generic {
             width: 120px;
             height: 80px;
+            min-width: 40px;
+            min-height: 24px;
             background-color: rgba(200, 200, 200, 0.3);
             border-color: #999;
         }
@@ -993,6 +1003,33 @@ Student C..."></textarea>
         
         // --- 2B. HELPER FUNCTIONS ---
         
+        // Get the current zoom/scale of the room layout
+        function getRoomZoom() {
+            const roomLayout = document.getElementById('room-layout');
+            const transform = window.getComputedStyle(roomLayout).transform;
+            
+            if (transform && transform !== 'none') {
+                // Parse matrix(a, b, c, d, e, f) or matrix3d(...) where first param is scaleX
+                const matrixMatch = transform.match(/matrix(?:3d)?\(([^,]+)/);
+                if (matrixMatch && matrixMatch[1]) {
+                    return parseFloat(matrixMatch[1]);
+                }
+            }
+            return 1.0; // Default scale is 1
+        }
+        
+        // Get minimum size for a furniture type
+        function getMinimumSize(featureType) {
+            const minimums = {
+                'windows': { w: 40, h: 120 },
+                'desk': { w: 80, h: 40 },
+                'smartboard': { w: 80, h: 30 },
+                'door': { w: 40, h: 60 },
+                'generic': { w: 40, h: 24 }
+            };
+            return minimums[featureType] || minimums['generic'];
+        }
+        
         function formatStudentName(fullName, format) {
             if (!fullName) return fullName;
             
@@ -1045,6 +1082,10 @@ Student C..."></textarea>
             
             // Show/hide Add Furniture button based on edit mode
             addFurnitureBtn.style.display = appState.isEditMode ? 'inline-block' : 'none';
+            
+            // Update Fit to Screen button text based on current zoom state
+            const currentZoom = getRoomZoom();
+            fitToScreenBtn.textContent = currentZoom !== 1.0 ? 'Reset Zoom' : 'Fit to Screen';
 
             shuffleBtn.disabled = appState.isEditMode;
             clearAssignmentsBtn.disabled = appState.isEditMode;
@@ -1168,6 +1209,8 @@ Student C..."></textarea>
                 featureEl.className = 'room-feature';
                 featureEl.classList.add(`type-${feature.type}`);
                 featureEl.dataset.featureId = featureId;
+                
+                // Apply position and size from state (unscaled logical values)
                 featureEl.style.left = feature.x + 'px';
                 featureEl.style.top = feature.y + 'px';
                 featureEl.style.width = feature.w + 'px';
@@ -1210,8 +1253,8 @@ Student C..."></textarea>
                 featureEl.appendChild(closeBtn);
                 
                 // Add drag and resize listeners
-                addFeatureDragListeners(featureEl, featureId);
-                addFeatureResizeListener(featureEl, featureId);
+                makeFeatureDraggable(featureEl, featureId);
+                attachFeatureResizeObserver(featureEl, featureId);
                 
                 roomFeaturesContainer.appendChild(featureEl);
             }
@@ -1293,21 +1336,35 @@ Student C..."></textarea>
             const roomContainer = document.querySelector('.room-container');
             const roomLayout = document.getElementById('room-layout');
             
-            // Center the room layout within the container
-            const containerWidth = roomContainer.clientWidth;
-            const containerHeight = roomContainer.clientHeight;
-            const layoutWidth = roomLayout.offsetWidth;
-            const layoutHeight = roomLayout.offsetHeight;
+            // Get current transform
+            const currentTransform = window.getComputedStyle(roomLayout).transform;
+            const isScaled = currentTransform && currentTransform !== 'none';
             
-            // Calculate scroll positions to center the layout
-            const scrollLeft = Math.max(0, (layoutWidth - containerWidth) / 2);
-            const scrollTop = Math.max(0, (layoutHeight - containerHeight) / 2);
-            
-            roomContainer.scrollTo({
-                left: scrollLeft,
-                top: scrollTop,
-                behavior: 'smooth'
-            });
+            if (isScaled) {
+                // Reset to normal view
+                roomLayout.style.transform = 'none';
+                roomLayout.style.transformOrigin = 'top left';
+            } else {
+                // Calculate scale to fit
+                const containerWidth = roomContainer.clientWidth;
+                const containerHeight = roomContainer.clientHeight;
+                const layoutWidth = roomLayout.offsetWidth;
+                const layoutHeight = roomLayout.offsetHeight;
+                
+                // Calculate scale factors for width and height
+                const scaleX = containerWidth / layoutWidth;
+                const scaleY = containerHeight / layoutHeight;
+                
+                // Use the smaller scale to ensure everything fits
+                const scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
+                
+                // Apply transform
+                roomLayout.style.transform = `scale(${scale})`;
+                roomLayout.style.transformOrigin = 'top left';
+                
+                // Scroll to top-left
+                roomContainer.scrollTo(0, 0);
+            }
         }
 
         // --- 4. EVENT HANDLERS ---
@@ -1638,8 +1695,8 @@ Student C..."></textarea>
             tableHeaderEl.addEventListener('mousedown', onMouseDown);
         }
 
-        function addFeatureDragListeners(featureEl, featureId) {
-            let offsetX, offsetY, isDragging = false;
+        function makeFeatureDraggable(featureEl, featureId) {
+            let startX, startY, startFeatureX, startFeatureY, isDragging = false;
             const room = document.querySelector('.room-container');
 
             function onMouseDown(e) {
@@ -1654,10 +1711,12 @@ Student C..."></textarea>
                 isDragging = true;
                 featureEl.style.zIndex = 1001; 
                 
-                const rect = featureEl.getBoundingClientRect();
-                const roomRect = room.getBoundingClientRect();
-                offsetX = e.clientX - rect.left;
-                offsetY = e.clientY - rect.top;
+                // Store starting mouse position and feature position
+                const feature = appState.roomFeatures[featureId];
+                startX = e.clientX;
+                startY = e.clientY;
+                startFeatureX = feature.x;
+                startFeatureY = feature.y;
 
                 e.preventDefault();
                 
@@ -1668,21 +1727,29 @@ Student C..."></textarea>
             function onMouseMove(e) {
                 if (!isDragging) return;
                 
-                const roomRect = room.getBoundingClientRect();
-                const roomLayout = document.getElementById('room-layout');
-                const roomLayoutRect = roomLayout.getBoundingClientRect();
+                // Get current zoom scale
+                const zoom = getRoomZoom();
                 
-                let newX = e.clientX - roomLayoutRect.left - offsetX + room.scrollLeft;
-                let newY = e.clientY - roomLayoutRect.top - offsetY + room.scrollTop;
+                // Calculate delta in screen pixels, then normalize by zoom
+                const dx = (e.clientX - startX) / zoom;
+                const dy = (e.clientY - startY) / zoom;
                 
+                // Apply delta to starting position
+                let newX = startFeatureX + dx;
+                let newY = startFeatureY + dy;
+                
+                // Clamp to non-negative values
                 newX = Math.max(0, newX);
                 newY = Math.max(0, newY);
                 
-                appState.roomFeatures[featureId].x = newX;
-                appState.roomFeatures[featureId].y = newY;
+                // Update state and DOM with rounded values
+                const roundedX = Math.round(newX);
+                const roundedY = Math.round(newY);
+                appState.roomFeatures[featureId].x = roundedX;
+                appState.roomFeatures[featureId].y = roundedY;
 
-                featureEl.style.left = newX + 'px';
-                featureEl.style.top = newY + 'px';
+                featureEl.style.left = roundedX + 'px';
+                featureEl.style.top = roundedY + 'px';
             }
 
             function onMouseUp() {
@@ -1699,23 +1766,50 @@ Student C..."></textarea>
             featureEl.addEventListener('mousedown', onMouseDown);
         }
         
-        function addFeatureResizeListener(featureEl, featureId) {
+        function attachFeatureResizeObserver(featureEl, featureId) {
             if (!window.ResizeObserver) return; // Fallback for older browsers
+            
+            let resizeTimeout;
             
             const resizeObserver = new ResizeObserver(entries => {
                 if (!appState.isEditMode) return;
                 
-                for (const entry of entries) {
-                    const newWidth = Math.round(entry.contentRect.width);
-                    const newHeight = Math.round(entry.contentRect.height);
-                    
-                    const feature = appState.roomFeatures[featureId];
-                    if (feature && (feature.w !== newWidth || feature.h !== newHeight)) {
-                        feature.w = newWidth;
-                        feature.h = newHeight;
-                        saveState();
+                // Debounce the resize to avoid excessive saves
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    for (const entry of entries) {
+                        // Get the current zoom to normalize dimensions
+                        const zoom = getRoomZoom();
+                        
+                        // Use offsetWidth/offsetHeight which gives actual pixel dimensions
+                        // Since the parent (#room-layout) has the transform, the children's
+                        // offsetWidth/Height are already in logical (unscaled) coordinates
+                        const newWidth = featureEl.offsetWidth;
+                        const newHeight = featureEl.offsetHeight;
+                        
+                        const feature = appState.roomFeatures[featureId];
+                        if (!feature) return;
+                        
+                        // Get minimum size for this feature type
+                        const minSize = getMinimumSize(feature.type);
+                        
+                        // Clamp to minimum sizes
+                        const clampedWidth = Math.max(minSize.w, newWidth);
+                        const clampedHeight = Math.max(minSize.h, newHeight);
+                        
+                        // Only update if changed
+                        if (feature.w !== clampedWidth || feature.h !== clampedHeight) {
+                            feature.w = clampedWidth;
+                            feature.h = clampedHeight;
+                            
+                            // Apply clamped sizes back to the element
+                            featureEl.style.width = clampedWidth + 'px';
+                            featureEl.style.height = clampedHeight + 'px';
+                            
+                            saveState();
+                        }
                     }
-                }
+                }, 100); // 100ms debounce
             });
             
             resizeObserver.observe(featureEl);
