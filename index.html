@@ -1078,7 +1078,10 @@ Student C..."></textarea>
         }
 
         function renderRoom() {
-            roomLayout.innerHTML = ''; 
+            // Clear only tables, not the room-features container
+            const tables = roomLayout.querySelectorAll('.table');
+            tables.forEach(table => table.remove());
+            
             const activeClass = appState.classes[appState.activeClassId];
             const assignments = activeClass.assignments; 
             const lockedStudents = activeClass.locked || []; 
