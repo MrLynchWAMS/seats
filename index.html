@@ -419,6 +419,12 @@ href='data:image/svg+xml;utf8,
             background-color: rgba(139, 69, 19, 0.3);
             border-color: #8b4513;
         }
+            #smartboard-feature {
+            width: 150px;
+            text-align: center;
+            background-color: rgba(255, 255, 255, 1);
+            border-color: #8b4513;
+        }
         #door-feature {
             width: 80px;
             height: 120px;
@@ -604,6 +610,7 @@ Student C..."></textarea>
         <main class="room-container">
             <div id="windows-feature" class="room-feature">WINDOWS</div>
             <div id="teacher-desk-feature" class="room-feature">Teacher Desk</div>
+            <div id="smartboard-feature" class="room-feature">Smartboard</div>
             <div id="door-feature" class="room-feature">Door</div>
 
             <div id="room-layout">
@@ -674,6 +681,7 @@ Student C..."></textarea>
             roomFeatures: { 
                 'windows': { x: 20, y: 100 }, 
                 'desk': { x: 50, y: 550 },
+                'smartboard': { x:250, y: 400 },
                 'door': { x: 750, y: 500 }
             }
         });
@@ -871,6 +879,7 @@ Student C..."></textarea>
         const resetAllBtn = document.getElementById('reset-all-btn'); 
         const featureWindows = document.getElementById('windows-feature');
         const featureDesk = document.getElementById('teacher-desk-feature');
+        const featureSmartboard = document.getElementById('smartboard-feature');    
         const featureDoor = document.getElementById('door-feature');
         const checkLonelyBtn = document.getElementById('check-lonely-btn');
         
@@ -1060,6 +1069,7 @@ Student C..."></textarea>
             featureDesk.style.top = features['desk'].y + 'px';
             featureDoor.style.left = features['door'].x + 'px';
             featureDoor.style.top = features['door'].y + 'px';
+            featureSmartboard.style.top = features['smartboard'].y + 'px';
         }
         
         function renderTableToggles() {
@@ -1803,6 +1813,7 @@ Student C..."></textarea>
         addFeatureDragListeners(featureWindows, 'windows');
         addFeatureDragListeners(featureDesk, 'desk');
         addFeatureDragListeners(featureDoor, 'door');
+        addFeatureDragListeners(featureSmartboard, 'smartboard');
         
         // First load and render
         loadState();
