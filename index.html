@@ -1009,8 +1009,8 @@ Student C..."></textarea>
             const transform = window.getComputedStyle(roomLayout).transform;
             
             if (transform && transform !== 'none') {
-                // Parse matrix(a, b, c, d, e, f) where 'a' is scaleX
-                const matrixMatch = transform.match(/matrix\(([^,]+)/);
+                // Parse matrix(a, b, c, d, e, f) or matrix3d(...) where first param is scaleX
+                const matrixMatch = transform.match(/matrix(?:3d)?\(([^,]+)/);
                 if (matrixMatch && matrixMatch[1]) {
                     return parseFloat(matrixMatch[1]);
                 }
@@ -1742,12 +1742,14 @@ Student C..."></textarea>
                 newX = Math.max(0, newX);
                 newY = Math.max(0, newY);
                 
-                // Update state and DOM
-                appState.roomFeatures[featureId].x = Math.round(newX);
-                appState.roomFeatures[featureId].y = Math.round(newY);
+                // Update state and DOM with rounded values
+                const roundedX = Math.round(newX);
+                const roundedY = Math.round(newY);
+                appState.roomFeatures[featureId].x = roundedX;
+                appState.roomFeatures[featureId].y = roundedY;
 
-                featureEl.style.left = Math.round(newX) + 'px';
-                featureEl.style.top = Math.round(newY) + 'px';
+                featureEl.style.left = roundedX + 'px';
+                featureEl.style.top = roundedY + 'px';
             }
 
             function onMouseUp() {
@@ -1776,8 +1778,12 @@ Student C..."></textarea>
                 clearTimeout(resizeTimeout);
                 resizeTimeout = setTimeout(() => {
                     for (const entry of entries) {
+                        // Get the current zoom to normalize dimensions
+                        const zoom = getRoomZoom();
+                        
                         // Use offsetWidth/offsetHeight which gives actual pixel dimensions
-                        // regardless of CSS transform scale
+                        // Since the parent (#room-layout) has the transform, the children's
+                        // offsetWidth/Height are already in logical (unscaled) coordinates
                         const newWidth = featureEl.offsetWidth;
                         const newHeight = featureEl.offsetHeight;
                         
