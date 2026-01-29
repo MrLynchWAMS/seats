@@ -701,7 +701,7 @@ Student C..."></textarea>
             <div class="panel-group data-ops-group">
                 <h2>App Data</h2>
                 <div class="data-ops-grid">
-                    <button id="share-link-btn">Share Link</button>
+                    <button id="share-link-btn">💾 Download Chart</button>
                 </div>
                 <button id="reset-all-btn" class="danger">Reset All Data</button>
             </div>
@@ -1946,10 +1946,33 @@ Student C..."></textarea>
         // --- 6. DATA SHARE & RESET ---
         
         function handleShareLink() {
-            // First, force a save to make sure the URL is 100% up-to-date
-            updateURLHash(true);
-            // Now, copy the link
-            prompt("Bookmark or share this unique link:", window.location.href);
+            // Create a downloadable JSON file with the current state
+            const stateString = JSON.stringify(appState, null, 2);
+            const blob = new Blob([stateString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `seating-chart-${appState.activeClassId}-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert('Seating chart downloaded! Share this file with others.\n\nTo load: Click "Reset All" button, then drag the JSON file into the browser window.');
+        }
+        
+        function handleImportData(jsonString) {
+            try {
+                const importedState = JSON.parse(jsonString);
+                appState = importedState;
+                saveState();
+                render();
+                alert('Seating chart imported successfully!');
+            } catch (e) {
+                console.error('Failed to import data:', e);
+                alert('Failed to import seating chart. The file may be corrupted.');
+            }
         }
         
         function handleResetAll() {
@@ -2212,6 +2235,29 @@ Student C..."></textarea>
         // First load and render
         loadState();
         render();
+        
+        // Add drag-and-drop import functionality
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        
+        document.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.name.endsWith('.json')) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        handleImportData(event.target.result);
+                    };
+                    reader.readAsText(file);
+                }
+            }
+        });
 
     });
     </script>
