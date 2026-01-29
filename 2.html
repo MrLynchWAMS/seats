@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seating Chart Generator (Shared)</title>
+    <link rel="icon" type="image/svg+xml" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23ffffff" stroke="%23000000" stroke-width="1" d="M7 3h10v5h2a1 1 0 0 1 1 1v4h-2v8h-2v-8H8v8H6v-8H4V9a1 1 0 0 1 1-1h2V3zM9 8h6V5H9v3z"/></svg>'>
+
+    <style>
+        /* --- 1. General Styles --- */
+        :root {
+            --bg-color: #f4f7f6;
+            --header-bg: #ffffff;
+            --border-color: #daddde;
+            --table-bg: #ffffff;
+            --seat-bg: #e0eef9;
+            --seat-empty-bg: #f0f0f0;
+            --seat-locked-bg: #fceceb;
+            --seat-locked-border: #e69d9a;
+            --text-color: #333;
+            --primary-color: #007bff;
+            --primary-hover: #0056b3;
+            --danger-color: #dc3545;
+            --success-color: #28a745;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Prevent body scroll, let canvas handle it */
+        }
+
+        /* --- 2. Header / Toolbar --- */
+        header {
+            background-color: var(--header-bg);
+            padding: 10px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            z-index: 10;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        button {
+            background-color: white;
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            color: var(--text-color);
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        button:hover {
+            background-color: #f8f9fa;
+            border-color: #b0b5b9;
+        }
+        
+        button.primary {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        button.primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button.danger {
+            color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+        button.danger:hover {
+            background-color: #fff5f5;
+        }
+
+        /* --- 3. Main Workspace --- */
+        #workspace {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background-image: 
+                radial-gradient(#e0e0e0 1px, transparent 1px);
+            background-size: 20px 20px;
+            cursor: grab;
+        }
+        #workspace.grabbing {
+            cursor: grabbing;
+        }
+
+        /* The canvas container that moves/zooms */
+        #chart-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: 0 0;
+            width: 3000px; /* Large canvas */
+            height: 3000px;
+        }
+
+        /* --- 4. Draggable Elements --- */
+        .draggable {
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            user-select: none;
+            cursor: grab;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: box-shadow 0.2s, transform 0.1s;
+        }
+
+        .draggable:active {
+            cursor: grabbing;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 100; /* Bring to front on drag */
+        }
+        
+        .draggable.locked {
+             border: 2px solid var(--seat-locked-border);
+        }
+
+        /* Student Seat Specifics */
+        .seat {
+            width: 80px;
+            height: 80px;
+            background-color: var(--seat-empty-bg);
+            flex-direction: column;
+            text-align: center;
+            padding: 4px;
+            box-sizing: border-box;
+            font-size: 0.85rem;
+            overflow: hidden;
+        }
+
+        .seat.occupied {
+            background-color: var(--seat-bg);
+            border-color: #b8daff;
+        }
+
+        .seat-name {
+            font-weight: 600;
+            pointer-events: none;
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .seat-info {
+            font-size: 0.7rem;
+            color: #666;
+            pointer-events: none;
+        }
+
+        .seat-actions {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            display: none;
+            gap: 2px;
+        }
+
+        .draggable:hover .seat-actions {
+            display: flex;
+        }
+
+        .action-btn {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: none;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            padding: 0;
+        }
+        .btn-delete { color: red; }
+        .btn-lock { color: #555; }
+        .btn-lock.is-locked { color: orange; }
+
+        /* Teacher Desk / Furniture */
+        .furniture {
+            background-color: #eee;
+            border: 2px solid #999;
+            color: #555;
+            font-weight: bold;
+        }
+        .furniture.teacher-desk {
+            width: 120px;
+            height: 60px;
+            border-radius: 8px;
+        }
+        .furniture.whiteboard {
+            width: 200px;
+            height: 20px;
+            background-color: #fff;
+            border-color: #333;
+            border-width: 3px;
+        }
+        .furniture.door {
+             width: 60px;
+             height: 60px;
+             border-radius: 0 60px 0 0; 
+             border: 3px solid #666;
+             border-left: none;
+             border-bottom: none;
+             background: transparent;
+        }
+
+        /* --- 5. Controls / Sidebar (Floating) --- */
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 900;
+            width: 260px;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+        }
+
+        .control-section {
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .control-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .control-label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            display: block;
+            color: #555;
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        /* --- 6. Roster Modal --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .modal-header h2 { margin: 0; font-size: 1.25rem; }
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+        textarea#roster-input {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: monospace;
+            resize: vertical;
+        }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* --- 7. Sidebar for Unseated Students --- */
+        #unseated-sidebar {
+            position: fixed;
+            top: 60px; /* Below header */
+            right: 0;
+            bottom: 0;
+            width: 220px;
+            background: white;
+            border-left: 1px solid var(--border-color);
+            padding: 15px;
+            overflow-y: auto;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.05);
+            z-index: 50;
+            transform: translateX(100%); /* Hidden by default */
+            transition: transform 0.3s ease;
+        }
+        #unseated-sidebar.open {
+            transform: translateX(0);
+        }
+        
+        .student-chip {
+            background: var(--seat-bg);
+            border: 1px solid #b8daff;
+            padding: 6px 10px;
+            margin-bottom: 6px;
+            border-radius: 4px;
+            cursor: grab;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .student-chip:active { cursor: grabbing; }
+
+        /* --- 8. Separation Rules UI --- */
+        .separation-rule {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: #fff0f0;
+            border: 1px solid #ffcccc;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            font-size: 0.85rem;
+        }
+        .remove-rule {
+            color: red;
+            cursor: pointer;
+            font-weight: bold;
+            margin-left: auto;
+        }
+
+        /* --- 9. Toast Notifications --- */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 2000;
+            pointer-events: none;
+        }
+        .toast.show { opacity: 1; }
+
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <h1>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--primary-color)"><path d="M4 18v3h3v-3h10v3h3v-6H4v3zm15-8h-2c0-2.21-1.79-4-4-4H9c-2.21 0-4 1.79-4 4H3v2h18v-2z"/></svg>
+            Seating Chart
+        </h1>
+        <div class="toolbar-group">
+            <button id="add-seat-btn">+ Seat</button>
+            <button id="add-furniture-btn">+ Furniture</button>
+            <button id="fit-screen-btn">Fit to Screen</button>
+        </div>
+        <div class="toolbar-group">
+            <button id="manage-roster-btn">Manage Roster</button>
+            <button id="share-link-btn" class="primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+                Share / Save
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div id="workspace">
+        <div id="chart-container">
+            <!-- Draggables will be injected here -->
+        </div>
+    </div>
+
+    <!-- Floating Controls -->
+    <div id="controls">
+        <div class="control-section">
+            <span class="control-label">Tools</span>
+            <div class="btn-grid">
+                <button id="shuffle-btn">Shuffle Students</button>
+                <button id="check-lonely-btn">Check Lonely</button>
+            </div>
+            <div style="margin-top:8px;">
+                <button id="clear-assignments-btn" style="width:100%">Clear Assignments (Keep Seats)</button>
+            </div>
+             <div style="margin-top:8px;">
+                <button id="reset-all-btn" class="danger" style="width:100%">Reset Everything</button>
+            </div>
+        </div>
+
+        <div class="control-section">
+            <span class="control-label">Display Options</span>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
+                <label for="name-format">Name Format:</label>
+                <select id="name-format">
+                    <option value="firstLast">First Last</option>
+                    <option value="firstL">First L.</option>
+                    <option value="first">First Only</option>
+                </select>
+            </div>
+            <div style="margin-bottom:5px;">
+                <label style="display:flex; align-items:center; gap:5px;">
+                    <input type="checkbox" id="color-gender"> Color by Gender
+                </label>
+            </div>
+            <div>
+                 <label>Text Size: <input type="range" id="text-size" min="10" max="24" value="14"></label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Roster Modal -->
+    <div id="roster-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Manage Class Roster</h2>
+                <button id="close-roster-modal" style="border:none; font-size:1.2rem;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:0.9rem; color:#666; margin-top:0;">
+                    Paste your student list below. Format: <code>First Last, Gender, Info</code> (Gender/Info optional). One student per line.
+                </p>
+                <textarea id="roster-input" placeholder="John Doe, M, IEP&#10;Jane Smith, F&#10;Alice Johnson"></textarea>
+
+                <div style="margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
+                    <span class="control-label">Separation Rules (Keep Apart)</span>
+                    <div style="display:flex; gap:5px; margin-bottom:10px;">
+                        <input type="text" id="sep-student-1" placeholder="Student A" style="flex:1; padding:5px;">
+                        <input type="text" id="sep-student-2" placeholder="Student B" style="flex:1; padding:5px;">
+                        <button id="add-sep-btn">+</button>
+                    </div>
+                    <div id="separation-list">
+                        <!-- Rules injected here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-roster-manager-btn" class="primary">Save Roster</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Unseated Sidebar -->
+    <div id="unseated-sidebar">
+        <h3>Unseated</h3>
+        <div id="unseated-list">
+            <!-- Chips injected here -->
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">Link Copied!</div>
+
+    <script type="module">
+    // --- FIREBASE SETUP ---
+    // Using imports from gstatic for standard HTML usage
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+    import { getFirestore, doc, getDoc, setDoc, collection } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+    const firebaseConfig = JSON.parse(new URLSearchParams(window.location.search).get('firebaseConfig') || '{}') || {};
+    // Fallback if config is missing (will rely on provided environment variables in real implementation)
+    // The environment handles the actual config injection in the specific platform this runs on.
+    
+    // In the provided environment, these globals are available:
+    const app = initializeApp(JSON.parse(__firebase_config));
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const appId = __app_id || 'default-app';
+
+    // Global State
+    let user = null;
+    let chartId = null;
+
+    // --- APP STATE ---
+    const state = {
+        students: [], // Array of {id, name, gender, info, assignedSeatId}
+        elements: [], // Array of {id, type, x, y, width, height, ...}
+        separations: [], // Array of {id1, id2}
+        settings: {
+            nameFormat: 'firstLast',
+            colorByGender: false,
+            textSize: 14,
+            width: 3000,
+            height: 3000
+        }
+    };
+    
+    let isDragging = false;
+    let dragTarget = null;
+    let dragOffset = { x: 0, y: 0 };
+    let isPanning = false;
+    let panStart = { x: 0, y: 0 };
+    let panOffset = { x: 0, y: 0 }; // Current Workspace pan
+    
+    // DOM Elements
+    const workspace = document.getElementById('workspace');
+    const chartContainer = document.getElementById('chart-container');
+    const toast = document.getElementById('toast');
+    const unseatedSidebar = document.getElementById('unseated-sidebar');
+    const unseatedList = document.getElementById('unseated-list');
+
+    // --- INITIALIZATION ---
+
+    async function initApp() {
+        // 1. Authenticate
+        try {
+             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        } catch (e) {
+            console.error("Auth failed", e);
+        }
+
+        onAuthStateChanged(auth, async (u) => {
+            user = u;
+            if (user) {
+                // 2. Check for Chart ID in URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlChartId = urlParams.get('chartId');
+
+                if (urlChartId) {
+                    chartId = urlChartId;
+                    await loadFromCloud(chartId);
+                } else {
+                    loadFromLocal(); // Fallback to local storage
+                }
+            }
+        });
+
+        setupEventListeners();
+        render();
+    }
+
+    // --- CLOUD STORAGE FUNCTIONS ---
+
+    async function saveToCloud() {
+        if (!user) return;
+        
+        // Use existing chartId or generate a new one
+        if (!chartId) {
+            chartId = generateId(); // Simple random ID
+        }
+
+        const dataToSave = {
+            ...state,
+            savedAt: new Date().toISOString(),
+            author: user.uid
+        };
+
+        try {
+            // Saving to public collection so it can be shared
+            const chartRef = doc(db, 'artifacts', appId, 'public', 'data', 'seating_charts', chartId);
+            await setDoc(chartRef, dataToSave);
+
+            // Update URL without reloading
+            const newUrl = `${window.location.origin}${window.location.pathname}?chartId=${chartId}`;
+            window.history.pushState({path: newUrl}, '', newUrl);
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(newUrl).then(() => {
+                showToast("Chart Saved! Link copied to clipboard.");
+            }).catch(() => {
+                showToast("Chart Saved! (Could not copy link automatically)");
+            });
+
+        } catch (e) {
+            console.error("Error saving:", e);
+            showToast("Error saving chart. Check console.");
+        }
+    }
+
+    async function loadFromCloud(id) {
+        if (!user) return;
+        
+        showToast("Loading chart...");
+        try {
+            const chartRef = doc(db, 'artifacts', appId, 'public', 'data', 'seating_charts', id);
+            const docSnap = await getDoc(chartRef);
+
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                // Merge data into state
+                state.students = data.students || [];
+                state.elements = data.elements || [];
+                state.separations = data.separations || [];
+                state.settings = { ...state.settings, ...(data.settings || {}) };
+                
+                applySettings();
+                render();
+                showToast("Chart loaded successfully.");
+            } else {
+                showToast("Chart not found (it may have been deleted).");
+            }
+        } catch (e) {
+            console.error("Error loading:", e);
+            showToast("Error loading chart.");
+        }
+    }
+
+    // --- LOCAL STORAGE FUNCTIONS (Backup) ---
+
+    function saveToLocal() {
+        localStorage.setItem('seatingChartState', JSON.stringify(state));
+    }
+
+    function loadFromLocal() {
+        const saved = localStorage.getItem('seatingChartState');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                state.students = parsed.students || [];
+                state.elements = parsed.elements || [];
+                state.separations = parsed.separations || [];
+                state.settings = { ...state.settings, ...(parsed.settings || {}) };
+                applySettings();
+                render();
+            } catch(e) {
+                console.error("Local load failed", e);
+            }
+        }
+    }
+
+    // --- CORE LOGIC ---
+
+    function setupEventListeners() {
+        // Toolbar
+        document.getElementById('add-seat-btn').addEventListener('click', () => addElement('seat'));
+        document.getElementById('add-furniture-btn').addEventListener('click', () => addElement('teacher-desk'));
+        document.getElementById('fit-screen-btn').addEventListener('click', fitToScreen);
+        document.getElementById('manage-roster-btn').addEventListener('click', openRosterModal);
+        document.getElementById('share-link-btn').addEventListener('click', saveToCloud);
+
+        // Controls
+        document.getElementById('shuffle-btn').addEventListener('click', shuffleStudents);
+        document.getElementById('check-lonely-btn').addEventListener('click', checkLonely);
+        document.getElementById('clear-assignments-btn').addEventListener('click', clearAssignments);
+        document.getElementById('reset-all-btn').addEventListener('click', resetAll);
+
+        // Settings
+        document.getElementById('name-format').addEventListener('change', (e) => {
+            state.settings.nameFormat = e.target.value;
+            render();
+            saveToLocal();
+        });
+        document.getElementById('text-size').addEventListener('input', (e) => {
+            state.settings.textSize = parseInt(e.target.value);
+            render();
+            saveToLocal();
+        });
+        document.getElementById('color-gender').addEventListener('change', (e) => {
+            state.settings.colorByGender = e.target.checked;
+            render();
+            saveToLocal();
+        });
+
+        // Workspace Interactions (Pan & Drag)
+        workspace.addEventListener('mousedown', handleMouseDown);
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        
+        // Mobile Touch
+        workspace.addEventListener('touchstart', handleTouchStart, {passive: false});
+        window.addEventListener('touchmove', handleTouchMove, {passive: false});
+        window.addEventListener('touchend', handleTouchEnd);
+
+        // Modal
+        document.getElementById('close-roster-modal').addEventListener('click', closeRosterModal);
+        document.getElementById('save-roster-manager-btn').addEventListener('click', saveRosterFromModal);
+        document.getElementById('add-sep-btn').addEventListener('click', addSeparation);
+    }
+
+    function generateId() {
+        return Math.random().toString(36).substr(2, 9);
+    }
+
+    function showToast(msg) {
+        toast.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // --- ELEMENT MANAGEMENT ---
+
+    function addElement(type) {
+        // Find a clear spot or default
+        const x = 50 - panOffset.x + (Math.random() * 50);
+        const y = 50 - panOffset.y + (Math.random() * 50);
+        
+        const el = {
+            id: generateId(),
+            type: type, // 'seat', 'teacher-desk', 'whiteboard', 'door'
+            x: Math.max(0, x),
+            y: Math.max(0, y),
+            rotation: 0,
+            locked: false
+        };
+        state.elements.push(el);
+        render();
+        saveToLocal();
+    }
+
+    function removeElement(id) {
+        // If it's a seat with a student, unassign student first
+        const student = state.students.find(s => s.assignedSeatId === id);
+        if (student) student.assignedSeatId = null;
+        
+        state.elements = state.elements.filter(e => e.id !== id);
+        render();
+        saveToLocal();
+    }
+
+    function toggleLock(id) {
+        const el = state.elements.find(e => e.id === id);
+        if (el) el.locked = !el.locked;
+        render();
+        saveToLocal();
+    }
+
+    // --- STUDENT LOGIC ---
+
+    function shuffleStudents() {
+        // Get all un-locked seats
+        const availableSeats = state.elements.filter(e => e.type === 'seat' && !e.locked);
+        // Get all students (assigned to unlocked seats OR unassigned)
+        // Students in locked seats stay put
+        const lockedSeatIds = state.elements.filter(e => e.type === 'seat' && e.locked).map(e => e.id);
+        
+        const studentsToShuffle = state.students.filter(s => {
+            if (!s.assignedSeatId) return true; // Unassigned
+            return !lockedSeatIds.includes(s.assignedSeatId); // In unlocked seat
+        });
+
+        // Clear assignments for these students
+        studentsToShuffle.forEach(s => s.assignedSeatId = null);
+
+        // Shuffle array
+        for (let i = studentsToShuffle.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [studentsToShuffle[i], studentsToShuffle[j]] = [studentsToShuffle[j], studentsToShuffle[i]];
+        }
+
+        // Assign
+        // Note: Simple assignment. Does not check separation logic strictly for simplicity, 
+        // but real apps would backtrack here.
+        let seatIndex = 0;
+        studentsToShuffle.forEach(student => {
+            if (seatIndex < availableSeats.length) {
+                // Find a seat that is empty (some locked seats might be occupied by students not in shuffle pool)
+                // Actually, availableSeats are all unlocked, so they are currently empty (we cleared occupants above)
+                student.assignedSeatId = availableSeats[seatIndex].id;
+                seatIndex++;
+            }
+        });
+
+        render();
+        saveToLocal();
+    }
+
+    function clearAssignments() {
+        if(!confirm("Remove all students from seats? Seats will remain.")) return;
+        state.students.forEach(s => s.assignedSeatId = null);
+        render();
+        saveToLocal();
+    }
+    
+    function resetAll() {
+        if(!confirm("Delete everything? This cannot be undone.")) return;
+        state.students = [];
+        state.elements = [];
+        state.separations = [];
+        render();
+        saveToLocal();
+        // Also clear ID so saving creates new
+        chartId = null;
+        window.history.pushState({}, '', window.location.pathname); 
+    }
+    
+    function checkLonely() {
+        // Simple proximity check
+        const threshold = 150; // pixels
+        const seats = state.elements.filter(e => e.type === 'seat');
+        let lonelyCount = 0;
+        
+        seats.forEach(seat => {
+            const elDiv = document.getElementById(`el-${seat.id}`);
+            if(elDiv) elDiv.style.border = '1px solid #ccc'; // Reset
+        });
+
+        seats.forEach(seat => {
+            if (state.students.find(s => s.assignedSeatId === seat.id)) {
+                // Has student
+                const neighbors = seats.filter(other => {
+                    if (other.id === seat.id) return false;
+                    const dist = Math.sqrt(Math.pow(seat.x - other.x, 2) + Math.pow(seat.y - other.y, 2));
+                    return dist < threshold;
+                });
+                
+                if (neighbors.length === 0) {
+                    const elDiv = document.getElementById(`el-${seat.id}`);
+                    if(elDiv) {
+                        elDiv.style.border = '3px solid orange';
+                        lonelyCount++;
+                    }
+                }
+            }
+        });
+        
+        if(lonelyCount > 0) showToast(`${lonelyCount} students seem lonely (orange border).`);
+        else showToast("Everyone has a neighbor!");
+    }
+
+    // --- RENDERING ---
+
+    function applySettings() {
+        document.getElementById('name-format').value = state.settings.nameFormat;
+        document.getElementById('text-size').value = state.settings.textSize;
+        document.getElementById('color-gender').checked = state.settings.colorByGender;
+    }
+
+    function render() {
+        // Render Elements
+        chartContainer.innerHTML = '';
+        state.elements.forEach(el => {
+            const div = document.createElement('div');
+            div.id = `el-${el.id}`;
+            div.className = `draggable ${el.type} ${el.locked ? 'locked' : ''}`;
+            div.style.left = `${el.x}px`;
+            div.style.top = `${el.y}px`;
+            div.dataset.id = el.id;
+
+            // Actions
+            const actions = document.createElement('div');
+            actions.className = 'seat-actions';
+            
+            const lockBtn = document.createElement('button');
+            lockBtn.className = `action-btn btn-lock ${el.locked ? 'is-locked' : ''}`;
+            lockBtn.innerHTML = el.locked ? '&#128274;' : '&#128275;';
+            lockBtn.onclick = (e) => { e.stopPropagation(); toggleLock(el.id); };
+            
+            const delBtn = document.createElement('button');
+            delBtn.className = 'action-btn btn-delete';
+            delBtn.innerHTML = '&times;';
+            delBtn.onclick = (e) => { e.stopPropagation(); removeElement(el.id); };
+
+            actions.appendChild(lockBtn);
+            actions.appendChild(delBtn);
+            div.appendChild(actions);
+
+            // Seat Content
+            if (el.type === 'seat') {
+                const student = state.students.find(s => s.assignedSeatId === el.id);
+                if (student) {
+                    div.classList.add('occupied');
+                    if (state.settings.colorByGender) {
+                        if (student.gender === 'M') div.style.backgroundColor = '#d1ecf1';
+                        if (student.gender === 'F') div.style.backgroundColor = '#f8d7da';
+                    } else {
+                        div.style.backgroundColor = ''; // Reset to css default
+                    }
+
+                    const nameSpan = document.createElement('div');
+                    nameSpan.className = 'seat-name';
+                    nameSpan.style.fontSize = `${state.settings.textSize}px`;
+                    nameSpan.textContent = formatName(student.name);
+                    
+                    const infoSpan = document.createElement('div');
+                    infoSpan.className = 'seat-info';
+                    infoSpan.textContent = student.info || '';
+
+                    div.appendChild(nameSpan);
+                    div.appendChild(infoSpan);
+                } else {
+                    div.innerHTML += `<span style="color:#ccc; font-size:0.7rem;">Empty</span>`;
+                }
+            } else if (el.type === 'teacher-desk') {
+                div.textContent = "Teacher";
+            } else if (el.type === 'whiteboard') {
+                div.textContent = "Board";
+            }
+
+            chartContainer.appendChild(div);
+        });
+
+        // Render Unseated Sidebar
+        const unseated = state.students.filter(s => !s.assignedSeatId);
+        unseatedList.innerHTML = '';
+        unseated.forEach(s => {
+            const chip = document.createElement('div');
+            chip.className = 'student-chip';
+            chip.textContent = s.name;
+            chip.draggable = true;
+            chip.dataset.studentId = s.id;
+            
+            // Allow dragging from sidebar to seat
+            chip.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', s.id);
+            });
+            
+            unseatedList.appendChild(chip);
+        });
+        
+        if (unseated.length > 0) unseatedSidebar.classList.add('open');
+        else unseatedSidebar.classList.remove('open');
+    }
+
+    function formatName(fullName) {
+        const parts = fullName.trim().split(/\s+/);
+        if (parts.length === 0) return "";
+        const first = parts[0];
+        const last = parts.length > 1 ? parts[parts.length - 1] : "";
+        
+        switch (state.settings.nameFormat) {
+            case 'first': return first;
+            case 'firstL': return last ? `${first} ${last[0]}.` : first;
+            default: return fullName;
+        }
+    }
+
+    // --- INTERACTION HANDLERS ---
+
+    function handleMouseDown(e) {
+        if (e.target.closest('.action-btn')) return;
+
+        // Check if clicking an element
+        const elDiv = e.target.closest('.draggable');
+        
+        if (elDiv) {
+            // Dragging Element
+            const id = elDiv.dataset.id;
+            const elObj = state.elements.find(el => el.id === id);
+            if (elObj && !elObj.locked) {
+                isDragging = true;
+                dragTarget = elObj;
+                const rect = elDiv.getBoundingClientRect();
+                // Store offset relative to the element's top-left
+                // e.clientX is screen coord. 
+                // We need to account for workspace Pan as well if we were using screen coords for pos, 
+                // but we store pos relative to container.
+                // Best approach: Calculate offset inside the div
+                dragOffset.x = e.clientX - rect.left;
+                dragOffset.y = e.clientY - rect.top;
+                workspace.classList.add('grabbing');
+            }
+        } else {
+            // Panning Workspace
+            isPanning = true;
+            panStart.x = e.clientX - panOffset.x;
+            panStart.y = e.clientY - panOffset.y;
+            workspace.style.cursor = 'grabbing';
+        }
+    }
+
+    function handleMouseMove(e) {
+        if (isDragging && dragTarget) {
+            // Calculate new X/Y relative to container
+            // We need to convert mouse client coordinates to chart-container coordinates
+            // container rect:
+            const containerRect = chartContainer.getBoundingClientRect();
+            
+            // New Left = MouseX - ContainerLeft - DragOffset
+            let newX = e.clientX - containerRect.left - dragOffset.x + (dragTarget.x * 0); // Logic fix: containerRect updates with pan, so this actually works for screen relative
+            
+            // Actually, simplified:
+            // Mouse absolute - Pan Offset - Drag Offset relative to element
+            // We need coordinates relative to the 0,0 of the chart container *before* transform? 
+            // No, the container is just absolute positioned. But the workspace is a window.
+            // Let's use the stored PanOffset.
+            
+            // chartContainer is at top:0 left:0 of workspace (relative).
+            // But we translate chartContainer? No, we pan by moving chartContainer? 
+            // Currently setup: chartContainer is absolute. We will pan by changing its transform or top/left?
+            // Let's implement Pan by transforming chartContainer.
+            
+            // Wait, I haven't implemented Pan rendering yet.
+            // Let's assume chartContainer.style.transform = `translate(${panOffset.x}px, ${panOffset.y}px)`
+            
+            const zoom = 1; // Future proofing
+            
+            // Position in Workspace
+            const workspaceRect = workspace.getBoundingClientRect();
+            const mouseXInWorkspace = e.clientX - workspaceRect.left;
+            const mouseYInWorkspace = e.clientY - workspaceRect.top;
+            
+            // Position in Container (subtract Pan)
+            const newX = (mouseXInWorkspace - panOffset.x) - dragOffset.x;
+            const newY = (mouseYInWorkspace - panOffset.y) - dragOffset.y;
+
+            dragTarget.x = newX;
+            dragTarget.y = newY;
+            
+            // Visual Update (quick)
+            const div = document.getElementById(`el-${dragTarget.id}`);
+            if(div) {
+                div.style.left = `${newX}px`;
+                div.style.top = `${newY}px`;
+            }
+        } else if (isPanning) {
+            panOffset.x = e.clientX - panStart.x;
+            panOffset.y = e.clientY - panStart.y;
+            updatePan();
+        }
+    }
+
+    function handleMouseUp() {
+        if (isDragging) {
+            isDragging = false;
+            dragTarget = null;
+            workspace.classList.remove('grabbing');
+            saveToLocal();
+        }
+        if (isPanning) {
+            isPanning = false;
+            workspace.style.cursor = 'grab';
+        }
+    }
+    
+    // Touch support (basic mapping)
+    function handleTouchStart(e) {
+        if (e.touches.length === 1) {
+            const touch = e.touches[0];
+            handleMouseDown({...touch, clientX: touch.clientX, clientY: touch.clientY, target: document.elementFromPoint(touch.clientX, touch.clientY)});
+        }
+    }
+    function handleTouchMove(e) {
+        if (e.touches.length === 1) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            handleMouseMove({...touch, clientX: touch.clientX, clientY: touch.clientY});
+        }
+    }
+    function handleTouchEnd(e) {
+        handleMouseUp();
+    }
+
+    function updatePan() {
+        chartContainer.style.transform = `translate(${panOffset.x}px, ${panOffset.y}px)`;
+    }
+
+    function fitToScreen() {
+        // Calculate bounding box of elements
+        if (state.elements.length === 0) {
+            panOffset = {x: 0, y: 0};
+            updatePan();
+            return;
+        }
+        
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        state.elements.forEach(el => {
+            if(el.x < minX) minX = el.x;
+            if(el.y < minY) minY = el.y;
+            if(el.x > maxX) maxX = el.x;
+            if(el.y > maxY) maxY = el.y;
+        });
+        
+        // Center content
+        const w = workspace.clientWidth;
+        const h = workspace.clientHeight;
+        const contentW = maxX - minX + 100; // + width of element roughly
+        const contentH = maxY - minY + 100;
+        
+        panOffset.x = (w - contentW) / 2 - minX + 50;
+        panOffset.y = (h - contentH) / 2 - minY + 50;
+        updatePan();
+    }
+
+    // --- ROSTER MODAL LOGIC ---
+
+    function openRosterModal() {
+        document.getElementById('roster-modal').style.display = 'flex';
+        // Populate text area
+        const text = state.students.map(s => {
+            let line = s.name;
+            if(s.gender) line += `, ${s.gender}`;
+            if(s.info) line += `, ${s.info}`;
+            return line;
+        }).join('\n');
+        document.getElementById('roster-input').value = text;
+        
+        renderSeparationList();
+    }
+
+    function closeRosterModal() {
+        document.getElementById('roster-modal').style.display = 'none';
+    }
+
+    function saveRosterFromModal() {
+        const text = document.getElementById('roster-input').value;
+        const lines = text.split('\n');
+        const newStudents = [];
+        
+        // Preserve existing students to keep assignments if name matches
+        const oldStudentsMap = new Map(state.students.map(s => [s.name.toLowerCase(), s]));
+
+        lines.forEach(line => {
+            const parts = line.split(',');
+            const name = parts[0]?.trim();
+            if (name) {
+                const gender = parts[1]?.trim() || '';
+                const info = parts[2]?.trim() || '';
+                
+                const existing = oldStudentsMap.get(name.toLowerCase());
+                
+                newStudents.push({
+                    id: existing ? existing.id : generateId(),
+                    name: name,
+                    gender: gender,
+                    info: info,
+                    assignedSeatId: existing ? existing.assignedSeatId : null
+                });
+            }
+        });
+
+        state.students = newStudents;
+        closeRosterModal();
+        render();
+        saveToLocal();
+    }
+    
+    function renderSeparationList() {
+        const container = document.getElementById('separation-list');
+        container.innerHTML = '';
+        state.separations.forEach((sep, index) => {
+            const div = document.createElement('div');
+            div.className = 'separation-rule';
+            
+            const s1 = state.students.find(s => s.id === sep.id1)?.name || "Unknown";
+            const s2 = state.students.find(s => s.id === sep.id2)?.name || "Unknown";
+            
+            div.innerHTML = `<span>${s1} &harr; ${s2}</span> <span class="remove-rule" data-index="${index}">&times;</span>`;
+            div.querySelector('.remove-rule').onclick = () => {
+                state.separations.splice(index, 1);
+                renderSeparationList();
+            };
+            container.appendChild(div);
+        });
+    }
+    
+    function addSeparation() {
+        const n1 = document.getElementById('sep-student-1').value.trim();
+        const n2 = document.getElementById('sep-student-2').value.trim();
+        
+        const s1 = state.students.find(s => s.name.toLowerCase() === n1.toLowerCase());
+        const s2 = state.students.find(s => s.name.toLowerCase() === n2.toLowerCase());
+        
+        if (s1 && s2 && s1.id !== s2.id) {
+            state.separations.push({id1: s1.id, id2: s2.id});
+            document.getElementById('sep-student-1').value = '';
+            document.getElementById('sep-student-2').value = '';
+            renderSeparationList();
+        } else {
+            alert("Could not find exact student matches.");
+        }
+    }
+
+    // --- DRAG DROP FROM SIDEBAR ---
+    // Handle drop on workspace to assign student to seat or just unseat
+    // For simplicity, we only support dropping ONTO a seat.
+    // But we need to handle the drop event on the seat elements.
+    
+    // We need to attach drop listeners to seats in Render? 
+    // Or global handler that checks target.
+    
+    workspace.addEventListener('dragover', (e) => e.preventDefault());
+    workspace.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const studentId = e.dataTransfer.getData('text/plain');
+        if (!studentId) return;
+
+        const targetSeat = e.target.closest('.seat');
+        
+        // Find student
+        const student = state.students.find(s => s.id === studentId);
+        if(!student) return;
+
+        if (targetSeat) {
+            const seatId = targetSeat.dataset.id;
+            // Check if seat occupied
+            const occupant = state.students.find(s => s.assignedSeatId === seatId);
+            if (occupant) {
+                // Swap
+                occupant.assignedSeatId = null; // Kick out current
+            }
+            student.assignedSeatId = seatId;
+        } else {
+            // Dropped on empty space -> Unassign
+            student.assignedSeatId = null;
+        }
+        render();
+        saveToLocal();
+    });
+
+    // Start
+    initApp();
+
+    </script>
+</body>
+</html>
