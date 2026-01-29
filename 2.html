@@ -1043,28 +1043,6 @@
     function handleMouseMove(e) {
         if (isDragging && dragTarget) {
             // Calculate new X/Y relative to container
-            // We need to convert mouse client coordinates to chart-container coordinates
-            // container rect:
-            const containerRect = chartContainer.getBoundingClientRect();
-            
-            // New Left = MouseX - ContainerLeft - DragOffset
-            let newX = e.clientX - containerRect.left - dragOffset.x + (dragTarget.x * 0); // Logic fix: containerRect updates with pan, so this actually works for screen relative
-            
-            // Actually, simplified:
-            // Mouse absolute - Pan Offset - Drag Offset relative to element
-            // We need coordinates relative to the 0,0 of the chart container *before* transform? 
-            // No, the container is just absolute positioned. But the workspace is a window.
-            // Let's use the stored PanOffset.
-            
-            // chartContainer is at top:0 left:0 of workspace (relative).
-            // But we translate chartContainer? No, we pan by moving chartContainer? 
-            // Currently setup: chartContainer is absolute. We will pan by changing its transform or top/left?
-            // Let's implement Pan by transforming chartContainer.
-            
-            // Wait, I haven't implemented Pan rendering yet.
-            // Let's assume chartContainer.style.transform = `translate(${panOffset.x}px, ${panOffset.y}px)`
-            
-            const zoom = 1; // Future proofing
             
             // Position in Workspace
             const workspaceRect = workspace.getBoundingClientRect();
