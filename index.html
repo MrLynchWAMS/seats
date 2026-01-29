@@ -216,479 +216,528 @@ href='data:image/svg+xml;utf8,
             gap: 0.5rem;
         }
         #reset-all-btn {
-            background-color: var(--danger-color);
+            background-color: #fff;
+            color: var(--danger-color);
             border-color: var(--danger-color);
+            margin-top: 0.5rem; /* Add space */
         }
         #reset-all-btn:hover {
-            background-color: var(--danger-hover);
-        }
-        
-        /* --- 5. Seating Chart Canvas --- */
-        .canvas-container {
-            flex: 1; /* Take remaining width */
-            overflow: auto;
-            background-color: var(--bg-color);
-            padding: 2rem;
-        }
-        
-        .canvas {
-            position: relative;
-            min-width: 800px;
-            min-height: 600px;
-            background-color: #fff;
-            border: 1px solid var(--border-color);
-            box-shadow: var(--shadow);
-            border-radius: 8px;
-            transform-origin: top left; /* for zoom */
-        }
-        
-        .edit-mode-indicator {
-            position: absolute;
-            top: 0.5rem;
-            left: 0.5rem;
-            padding: 0.5rem 0.75rem;
-            background-color: var(--accent-color);
-            color: white;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-        
-        /* --- 6. Tables & Seats (new chip design) --- */
-        .table {
-            position: absolute;
-            background-color: var(--table-bg);
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            padding: 1rem;
-            cursor: grab; /* Default cursor */
-            /* width and height dynamically set in JS */
-        }
-        
-        .table.dragging {
-            cursor: grabbing; 
-            opacity: 0.7;
-            z-index: 100;
-        }
-        
-        .table.grabbable {
-            cursor: grab;
-        }
-        .table.grabbable:hover {
-            border-color: var(--accent-color);
-            box-shadow: 0 4px 12px rgba(0,123,255,0.2);
-        }
-        
-        .table-header {
-            font-weight: 600;
-            margin-bottom: 0.75rem;
-            color: var(--text-color);
-            font-size: 0.95rem;
-            text-align: center;
-        }
-        
-        .remove-table-btn {
-            position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
             background-color: var(--danger-color);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            font-size: 0.9rem;
-            cursor: pointer;
-            display: none; /* Hidden unless edit mode */
-            line-height: 1;
+            color: #fff;
         }
-        .edit-mode .remove-table-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .remove-table-btn:hover {
-            background-color: var(--danger-hover);
+
+        /* --- 5. Seating Chart Area --- */
+        .room-container {
+            flex: 1;
+            padding: 0; 
+            overflow: auto; /* Changed from hidden to auto for scrolling */
+            position: relative; 
+            background-image: linear-gradient(to right, #fdfdfd 1px, transparent 1px),
+                              linear-gradient(to bottom, #fdfdfd 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-color: var(--bg-color);
         }
         
-        .seats {
-            display: grid;
-            gap: var(--chip-gap);
-            grid-template-columns: repeat(auto-fit, var(--chip-w));
-        }
-        
-        .seat {
-            min-width: var(--chip-w);
-            max-width: var(--chip-w);
-            min-height: calc(2.0rem * var(--text-scale));
-            padding: calc(0.3rem * var(--text-scale)) calc(0.5rem * var(--text-scale));
-            background-color: var(--seat-empty-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            font-size: calc(0.85rem * var(--text-scale));
-            line-height: 1.2;
-            color: var(--text-light);
-            cursor: pointer;
-            transition: all 0.15s;
+        #room-layout {
             position: relative;
-            overflow: hidden;
+            min-width: 900px;
+            min-height: 700px;
+        }
+        
+        .table {
+            background-color: var(--table-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 0.5rem; 
+            position: absolute; 
+            transition: box-shadow 0.2s;
             box-sizing: border-box;
         }
         
-        .seat.occupied {
-            background-color: var(--seat-bg);
-            color: var(--text-color);
-            font-weight: 500;
+        /* 4-seat tables */
+        .table[data-max-seats="4"] {
+            width: var(--table-w-4);
         }
         
-        /* Gender coloring when enabled */
+        /* 5-seat tables (portrait) */
+        .table[data-max-seats="5"] {
+            width: var(--table-w-5);
+        }
+        
+        /* Newton (t6) - landscape */
+        .table[data-table-id="t6"] {
+            width: var(--table-w-5-land);
+        }
+        
+        .table.dragging-table {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            z-index: 1000;
+            opacity: 0.95;
+        }
+        
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 0.5rem; 
+            margin-bottom: 0.75rem; 
+            cursor: default;
+            font-size: calc(0.95rem * var(--text-scale));
+        }
+        
+        .table-name-input {
+            font-family: var(--font-family);
+            font-size: calc(0.95rem * var(--text-scale));
+            font-weight: 600;
+            border: none;
+            padding: 4px;
+            margin: -4px;
+            width: 100%;
+            border-radius: 4px;
+            background-color: transparent;
+            pointer-events: none; 
+        }
+
+        .seat-container {
+            display: grid;
+            gap: var(--chip-gap);
+        }
+        
+        /* 4-seat tables: 2-column grid */
+        .table[data-max-seats="4"] .seat-container {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        /* 5-seat tables (portrait): 2-column grid */
+        .table[data-max-seats="5"] .seat-container {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        /* Newton (t6) landscape: 3-column grid */
+        .table[data-table-id="t6"] .seat-container {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .seat {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: calc(0.75rem * var(--text-scale)) calc(0.5rem * var(--text-scale));
+            text-align: center;
+            font-size: calc(0.85rem * var(--text-scale));
+            font-weight: 500;
+            min-height: 20px;
+            user-select: none;
+            transition: all 0.2s ease;
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis;
+            min-width: 0; /* Allow truncation */
+            width: var(--chip-w);
+        }
+        
+        .seat.empty {
+            background-color: var(--seat-empty-bg);
+            border-style: dashed;
+            color: var(--text-light);
+            cursor: default;
+        }
+        
+        .seat.filled {
+            background-color: var(--seat-bg);
+            cursor: grab;
+        }
+        
+        .seat.locked {
+            border: 2px solid var(--danger-color);
+            font-weight: 700;
+            color: #b02a37;
+        }
+        
+        /* Gender color coding */
         .seat.gender-m {
             background-color: var(--gender-m-bg);
-        }
-        .seat.gender-m::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background-color: var(--gender-m-stripe);
+            border-left: 4px solid var(--gender-m-stripe);
         }
         
         .seat.gender-f {
             background-color: var(--gender-f-bg);
+            border-left: 4px solid var(--gender-f-stripe);
         }
-        .seat.gender-f::before {
-            content: '';
+        
+        /* Locked seats with gender colors - keep gender background, add red outline */
+        .seat.locked.gender-m,
+        .seat.locked.gender-f {
+            border: 2px solid var(--danger-color);
+            border-left-width: 4px; /* Preserve the gender stripe */
+        }
+        
+        .seat.dragging {
+            opacity: 0.4;
+            transform: scale(0.95);
+        }
+        
+        .table[data-used="false"] {
+            opacity: 0.4;
+            background-color: #f9f9f9;
+        }
+        
+        /* --- 6. Room Features --- */
+        #room-features {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .room-feature {
             position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background-color: var(--gender-f-stripe);
-        }
-        
-        .seat.locked {
-            background-color: var(--seat-locked-bg);
-            border-color: var(--seat-locked-border);
-        }
-        
-        .seat:hover {
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-            transform: translateY(-2px);
-        }
-        
-        /* Lock icon within chip */
-        .lock-icon {
-            position: absolute;
-            top: 2px;
-            right: 4px;
-            font-size: calc(0.7rem * var(--text-scale));
-            color: var(--danger-color);
-        }
-        
-        /* --- 7. Display Options Panel --- */
-        .panel-right {
-            width: 250px;
-            background-color: #fff;
-            border-left: 1px solid var(--border-color);
-            padding: 1.5rem;
+            background-color: rgba(200, 200, 200, 0.2);
+            border: 1px dashed #aaa;
+            padding: 0.5rem 1rem;
+            font-weight: 600;
+            color: #555;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            pointer-events: none; 
+            user-select: none;
+            box-sizing: border-box;
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
-            overflow-y: auto;
+            overflow: hidden;
         }
         
-        .display-option-row {
-            display: grid;
-            grid-template-columns: auto 1fr;
-            gap: 0.75rem;
-            align-items: center;
-            margin-bottom: 0.5rem;
-        }
-        .display-option-row label {
-            font-weight: normal;
-        }
-        .display-option-row select {
-            justify-self: end;
-        }
-        
-        #text-size-slider {
-            width: 100%;
-        }
-        #text-size-value {
-            text-align: right;
-            font-weight: 600;
-            color: var(--accent-color);
-        }
-        
-        /* --- 8. Roster Manager Modal --- */
-        .roster-manager-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0,0,0,0.5);
+        .room-feature-title {
+            flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
-            visibility: hidden;
-            opacity: 0;
-            transition: opacity 0.2s, visibility 0.2s;
-        }
-        .roster-manager-overlay.modal-visible {
-            visibility: visible;
-            opacity: 1;
-        }
-        
-        .roster-manager-modal {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-            width: 90%;
-            max-width: 700px;
-            max-height: 80vh;
-            overflow-y: auto;
-            padding: 2rem;
+            outline: none;
+            border: none;
+            background: transparent;
+            font-weight: 600;
+            color: inherit;
+            text-align: center;
+            word-break: break-word;
         }
         
-        .roster-manager-modal h2 {
-            margin: 0 0 1.5rem 0;
-            font-size: 1.4rem;
-            color: var(--accent-color);
+        .room-feature-close {
+            display: none;
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 20px;
+            height: 20px;
+            background-color: var(--danger-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            padding: 0;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
         }
         
-        .modal-section {
-            margin-bottom: 2rem;
+        .room-feature-close:hover {
+            background-color: var(--danger-hover);
         }
-        .modal-section h3 {
-            margin: 0 0 1rem 0;
+        
+        /* Type-specific styles */
+        .room-feature.type-windows {
+            width: 60px; 
+            height: 400px; 
+            min-width: 40px;
+            min-height: 120px;
+            padding: 1rem 0.75rem;
+            text-align: center;
             font-size: 1.1rem;
-            color: var(--text-color);
+            letter-spacing: 1px;
+            background-color: rgba(173, 216, 230, 0.4);
+            border-color: #add8e6;
+            writing-mode: vertical-rl; 
+            text-orientation: mixed;
         }
         
-        #roster-manager-list {
+        .room-feature.type-desk {
+            width: 150px;
+            height: 60px;
+            min-width: 80px;
+            min-height: 40px;
+            text-align: center;
+            background-color: rgba(139, 69, 19, 0.3);
+            border-color: #8b4513;
+        }
+        
+        .room-feature.type-smartboard {
+            width: 150px;
+            height: 40px;
+            min-width: 80px;
+            min-height: 30px;
+            text-align: center;
+            background-color: rgba(255, 255, 255, 1);
+            border-color: #8b4513;
+        }
+        
+        .room-feature.type-door {
+            width: 80px;
+            height: 120px;
+            min-width: 40px;
+            min-height: 60px;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            background-color: rgba(255, 182, 193, 0.4);
+            border-color: #ffb6c1;
+        }
+        
+        .room-feature.type-generic {
+            width: 120px;
+            height: 80px;
+            min-width: 40px;
+            min-height: 24px;
+            background-color: rgba(200, 200, 200, 0.3);
+            border-color: #999;
+        }
+        
+        /* Color picker for furniture */
+        .feature-color-picker {
+            display: none;
+            position: absolute;
+            bottom: 4px;
+            left: 4px;
+            width: 30px;
+            height: 30px;
+            border: 2px solid #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+        
+        body.layout-edit-mode .feature-color-picker {
+            display: block;
+        }
+        
+        /* Removed old individual feature IDs */
+
+        /* --- 7. EDIT MODE STYLES --- */
+        
+        body.layout-edit-mode .table-header { cursor: grab; }
+        body.layout-edit-mode .table-header:active { cursor: grabbing; }
+        body.layout-edit-mode .table-name-input {
+            pointer-events: all; 
+            background-color: #f0f0f0;
+            box-shadow: 0 0 0 2px var(--accent-color) inset;
+        }
+        body.layout-edit-mode .seat {
+            pointer-events: none; 
+            opacity: 0.6;
+            cursor: default;
+        }
+        body.layout-edit-mode .room-feature {
+            pointer-events: all;
+            cursor: grab;
+            border: 2px solid var(--accent-color);
+            z-index: 999;
+            resize: both;
+            overflow: auto;
+        }
+        body.layout-edit-mode .room-feature:active {
+            cursor: grabbing;
+            z-index: 1001; 
+        }
+        body.layout-edit-mode .room-feature-title {
+            cursor: text;
+        }
+        body.layout-edit-mode .room-feature-close {
+            display: flex;
+        }
+        
+        /* Make tables resizable in edit mode */
+        body.layout-edit-mode .table {
+            resize: both;
+            overflow: auto;
+        }
+        
+        /* --- 8. MODAL STYLES (Roster) --- */
+        .modal-overlay {
+            display: none; 
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.modal-visible {
+            display: flex; 
+        }
+        .modal-content {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 600px;
+        }
+        .modal-content h3 {
+            margin-top: 0;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        /* Roster Manager Modal */
+        #roster-manager-list, #separation-list {
             list-style: none;
             padding: 0;
             margin: 0;
+            max-height: 30vh;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
         }
-        #roster-manager-list li {
+        #roster-manager-list li, #separation-list li {
             display: grid;
             grid-template-columns: 1fr auto;
             gap: 1rem;
             align-items: center;
-            padding: 0.75rem;
+            padding: 0.75rem 1rem;
             border-bottom: 1px solid var(--border-color);
         }
-        #roster-manager-list li:last-child {
+        #roster-manager-list li:last-child, #separation-list li:last-child {
             border-bottom: none;
         }
-        
-        .separation-controls {
+        #separation-add-form {
             display: grid;
             grid-template-columns: 1fr 1fr auto;
             gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        #separation-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        #separation-list li {
-            display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding: 0.5rem;
-            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 0.5rem;
         }
-        #separation-list li:last-child {
-            border-bottom: none;
-        }
-        #separation-list li button {
-            padding: 0.3rem 0.6rem;
-            font-size: 0.8rem;
-        }
-        
-        .modal-actions {
-            display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
-            margin-top: 1.5rem;
-        }
-        
-        /* --- 9. Shared Link Indicator Banner --- */
-        .shared-link-banner {
-            background-color: #fff3cd;
-            border: 1px solid #ffc107;
-            color: #856404;
-            padding: 0.75rem 1rem;
-            text-align: center;
-            font-weight: 500;
-            display: none; /* Hidden by default */
-        }
-        .shared-link-banner.visible {
-            display: block;
-        }
-        .shared-link-banner button {
-            margin-left: 1rem;
-            background-color: #ffc107;
-            border-color: #ffc107;
-            color: #000;
-        }
-        .shared-link-banner button:hover {
-            background-color: #e0a800;
-        }
+        #separation-list { margin-top: 0.5rem; }
         
     </style>
 </head>
 <body>
 
-    <!-- Shared Link Banner -->
-    <div id="shared-link-banner" class="shared-link-banner">
-        You are viewing a shared seating chart. 
-        <button id="save-shared-data-btn">Save to My Browser</button>
-        <button id="dismiss-banner-btn" style="background-color: transparent; border: none; color: #856404; text-decoration: underline; cursor: pointer;">Dismiss</button>
-    </div>
-
     <header>
-        <h1>🪑 Seating Chart Generator</h1>
+        <h1>Seating Chart</h1>
         <div class="controls-main">
             <div class="control-group">
-                <label for="class-selector">Class:</label>
-                <select id="class-selector"></select>
+                <label for="class-selector" style="font-weight: 600;">Class:</label>
+                <select id="class-selector">
+                    <!-- JS will populate this -->
+                </select>
             </div>
             <button id="edit-layout-btn">Edit Layout</button>
-            <button id="add-furniture-btn" style="display:none;">+ Add Table</button>
+            <button id="add-furniture-btn" style="display: none;">Add Furniture</button>
             <button id="fit-to-screen-btn">Fit to Screen</button>
+            <button id="shuffle-btn">Shuffle Unlocked</button>
+            <button id="clear-assignments-btn" class="danger">Clear All Seats</button>
         </div>
     </header>
 
     <div class="main-container">
-        <!-- Left Panel: Roster & Settings -->
-        <div class="panel-left">
+        
+        <aside class="panel-left">
             <div class="panel-group roster-group">
                 <h2>Roster</h2>
-                <label for="roster-input">Student Names (one per line):</label>
-                <textarea id="roster-input" placeholder="Alice
-Bob
-Charlie
-Dana"></textarea>
+                <label for="roster-input">Student Names (One per line)</label>
+                <textarea id="roster-input" placeholder="Student A
+Student B
+Student C..."></textarea>
                 <div class="roster-buttons">
                     <button id="save-roster-btn">Save Roster</button>
                     <button id="manage-roster-btn">Manage Roster</button>
                 </div>
             </div>
-
-            <div class="panel-group shuffle-group">
-                <h2>Shuffle & Clear</h2>
-                <div class="shuffle-options-group">
-                    <div>
-                        <input type="checkbox" id="avoid-lonely-check" checked>
-                        <label for="avoid-lonely-check">Avoid "lonely" students (same gender)</label>
-                    </div>
-                    <div>
-                        <input type="checkbox" id="respect-locked-check" checked>
-                        <label for="respect-locked-check">Respect locked seats</label>
-                    </div>
-                </div>
-                <button id="shuffle-btn">🎲 Shuffle</button>
-                <button id="check-lonely-btn">Check Gender Balance</button>
-                <button id="clear-assignments-btn" class="danger">Clear Assignments</button>
-            </div>
-
-            <div class="panel-group tables-group">
-                <h2>Tables & Layout</h2>
-                <div id="table-settings-list">
-                    <!-- Table settings rows will be inserted here by JS -->
+            
+            <div class="panel-group table-settings-group">
+                <h2>Table Settings</h2>
+                <div id="table-toggles">
+                    <!-- JS will populate this -->
                 </div>
             </div>
-
-            <div class="panel-group data-ops-group">
-                <h2>Data</h2>
-                <div class="data-ops-grid">
-                    <button id="share-link-btn">📋 Share Link</button>
-                    <button id="reset-all-btn" class="danger">Reset All</button>
+            
+            <div class="panel-group shuffle-options-group">
+                <h2>Shuffle Options</h2>
+                <div>
+                    <input type="checkbox" id="avoid-lonely-check" />
+                    <label for="avoid-lonely-check">Avoid 'lonely' students</label>
                 </div>
+                <button id="check-lonely-btn">Check 'Lonely' Students</button>
             </div>
-        </div>
-
-        <!-- Center: Seating Chart Canvas -->
-        <div class="canvas-container">
-            <div id="canvas" class="canvas">
-                <!-- Tables will be rendered here -->
-            </div>
-        </div>
-
-        <!-- Right Panel: Display Options -->
-        <div class="panel-right">
-            <div class="panel-group">
+            
+            <div class="panel-group display-options-group">
                 <h2>Display Options</h2>
-                
-                <div class="display-option-row">
-                    <label for="name-format-select">Name Format:</label>
-                    <select id="name-format-select">
+                <div style="margin-bottom: 1rem;">
+                    <label for="name-format-select" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Name Format:</label>
+                    <select id="name-format-select" style="width: 100%;">
                         <option value="full">Full Name</option>
-                        <option value="first">First Name</option>
-                        <option value="last">Last Name</option>
-                        <option value="fl">F. Last</option>
-                        <option value="lf">Last, F.</option>
+                        <option value="firstLast">First + Last Initial</option>
+                        <option value="first">First Only</option>
                     </select>
                 </div>
-                
-                <div class="display-option-row">
-                    <label for="color-by-gender-check">Color by Gender:</label>
-                    <input type="checkbox" id="color-by-gender-check">
+                <div style="margin-bottom: 1rem;">
+                    <label for="text-size-slider" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Text Size: <span id="text-size-value">100%</span></label>
+                    <input type="range" id="text-size-slider" min="80" max="130" value="100" style="width: 100%;">
                 </div>
-                
-                <div class="display-option-row">
-                    <label for="text-size-slider">Text Size:</label>
-                    <span id="text-size-value">100%</span>
+                <div>
+                    <input type="checkbox" id="color-by-gender-check" />
+                    <label for="color-by-gender-check">Color-code by gender</label>
                 </div>
-                <input type="range" id="text-size-slider" min="70" max="150" value="100">
             </div>
-        </div>
-    </div>
 
-    <!-- Roster Manager Modal -->
-    <div id="roster-manager-overlay" class="roster-manager-overlay">
-        <div class="roster-manager-modal">
-            <h2>Manage Roster</h2>
-            
-            <div class="modal-section">
-                <h3>Student Genders</h3>
-                <ul id="roster-manager-list">
-                    <!-- Populated by JS -->
-                </ul>
-            </div>
-            
-            <div class="modal-section">
-                <h3>Separation Rules</h3>
-                <p style="margin-bottom:1rem; color: var(--text-light); font-size: 0.9rem;">
-                    Students added here will not be seated at the same table during shuffle.
-                </p>
-                <div class="separation-controls">
-                    <select id="sep-student-1">
-                        <option value="">Select student...</option>
-                    </select>
-                    <select id="sep-student-2">
-                        <option value="">Select student...</option>
-                    </select>
-                    <button id="add-separation-btn">+ Add</button>
+            <!-- MODIFIED: "Share" button, no Import -->
+            <div class="panel-group data-ops-group">
+                <h2>App Data</h2>
+                <div class="data-ops-grid">
+                    <button id="share-link-btn">Share Link</button>
                 </div>
-                <ul id="separation-list">
-                    <!-- Populated by JS -->
-                </ul>
+                <button id="reset-all-btn" class="danger">Reset All Data</button>
             </div>
+        </aside>
+
+        <main class="room-container">
+            <div id="room-layout">
+                <div id="room-features">
+                    <!-- JS will populate furniture items -->
+                </div>
+                <!-- JS will populate tables -->
+            </div>
+        </main>
+    </div>
+    
+    <!-- ROSTER MANAGER MODAL -->
+    <div id="roster-manager-overlay" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Manage Roster</h3>
+            <p>Assign genders to students for the "Avoid 'lonely' students" shuffle option.</p>
+            <ul id="roster-manager-list">
+                <!-- JS will populate this -->
+            </ul>
             
-            <div class="modal-actions">
+            <h3 style="margin-top: 1.5rem;">Separation List</h3>
+            <p>Students who should not be at the same table.</p>
+            <div id="separation-add-form">
+                <select id="sep-student-1"></select>
+                <select id="sep-student-2"></select>
+                <button id="add-separation-btn">Add</button>
+            </div>
+            <ul id="separation-list">
+                <!-- JS will populate this -->
+            </ul>
+            
+            <div class="modal-buttons">
                 <button id="close-roster-modal-btn">Cancel</button>
                 <button id="save-roster-manager-btn">Save Changes</button>
             </div>
@@ -697,836 +746,1259 @@ Dana"></textarea>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
+
         // --- 1. STATE MANAGEMENT ---
         
-        const DEFAULT_CLASSES = [
-            { id: 'class1', name: 'Class 1', roster: [], separations: [], assignments: {} },
-            { id: 'class2', name: 'Class 2', roster: [], separations: [], assignments: {} },
-            { id: 'class3', name: 'Class 3', roster: [], separations: [], assignments: {} }
-        ];
-        
-        const DEFAULT_TABLES = [
-            { id: 't1', name: 'Round 1', type: 'round', x: 100, y: 100 },
-            { id: 't2', name: 'Round 2', type: 'round', x: 100, y: 250 },
-            { id: 't3', name: 'Round 3', type: 'round', x: 100, y: 400 },
-            { id: 't4', name: 'Round 4', type: 'round', x: 400, y: 100 },
-            { id: 't5', name: 'Newton', type: 'newton', x: 400, y: 250 }
-        ];
-        
-        let appState = {
-            classes: DEFAULT_CLASSES,
-            activeClassId: 'class1',
-            tables: DEFAULT_TABLES,
-            editMode: false,
-            nextTableId: 6,
-            displayOptions: {
-                nameFormat: 'full',
-                textScale: 1.0,
-                colorByGender: false
-            }
+        // Default colors for furniture types
+        const FEATURE_DEFAULT_COLORS = {
+            'windows': '#ADD8E6',
+            'desk': '#C49A6C',
+            'smartboard': '#FFFFFF',
+            'door': '#FFB6C1',
+            'generic': '#CCCCCC'
         };
         
-        let isLoadedFromURL = false; // Track if data came from URL
+        let appState = {};
+        let draggedStudent = null; 
+        let saveTimeout; // For debouncing URL hash saves
+
+        const getInitialState = () => ({
+            activeClassId: 'p1',
+            isEditMode: false,
+            displayOptions: {
+                nameFormat: 'full',
+                textScale: 100,
+                colorByGender: false
+            },
+            classes: {
+                'p1': { name: 'Period 1', roster: [], separations: [], assignments: {}, locked: [], tableSettings: {} },
+                'p2': { name: 'Period 2', roster: [], separations: [], assignments: {}, locked: [], tableSettings: {} },
+                'p5': { name: 'Period 5', roster: [], separations: [], assignments: {}, locked: [], tableSettings: {} },
+                'p7': { name: 'Period 7', roster: [], separations: [], assignments: {}, locked: [], tableSettings: {} },
+                'p8': { name: 'Period 8', roster: [], separations: [], assignments: {}, locked: [], tableSettings: {} },
+            },
+            tables: [
+                { id: 't1', name: 'Banneker', maxSeats: 4, x: 120, y: 100 },
+                { id: 't2', name: 'Einstein', maxSeats: 4, x: 120, y: 350 },
+                { id: 't3', name: 'Curie',    maxSeats: 5, x: 550, y: 100 },
+                { id: 't4', name: 'Hawking',  maxSeats: 5, x: 550, y: 300 },
+                { id: 't5', name: 'Ochoa',    maxSeats: 5, x: 550, y: 500 },
+                { id: 't6', name: 'Newton',   maxSeats: 5, x: 340, y: 400 },
+            ],
+            roomFeatures: {}
+        });
+
+        // NEW: Load state from URL first, then localStorage
+        function loadState() {
+            const initialState = getInitialState();
+            let loadedState = null;
+
+            // 1. Try to load from URL hash
+            const hash = window.location.hash.substring(1);
+            if (hash) {
+                try {
+                    const utf8String = atob(hash);
+                    const jsonState = decodeURIComponent(escape(utf8String));
+                    loadedState = JSON.parse(jsonState);
+                    // Do NOT save to localStorage - let the URL be the source of truth for shared links
+                } catch (e) {
+                    console.error("Failed to parse state from URL hash. Loading from localStorage.", e);
+                    loadedState = null; // Ensure fallback
+                }
+            }
+            
+            // 2. If URL load failed, try localStorage
+            if (!loadedState) {
+                const savedState = localStorage.getItem('seatingChartState');
+                if (savedState) {
+                    try {
+                        loadedState = JSON.parse(savedState);
+                    } catch (e) {
+                        console.error("Failed to parse state from localStorage. Resetting to default.", e);
+                        loadedState = initialState;
+                    }
+                } else {
+                    loadedState = initialState;
+                }
+            }
+            
+            appState = loadedState;
+
+            // --- Data Migration (run on any loaded data) ---
+            
+            // 1. Migrate Classes
+            const oldClassIds = ['p3', 'p4'];
+            const classKeys = appState.classes ? Object.keys(appState.classes) : [];
+            
+            if (oldClassIds.some(id => classKeys.includes(id)) || !classKeys.includes('p8')) {
+                const oldClasses = appState.classes || {};
+                appState.classes = {
+                    'p1': oldClasses.p1 || initialState.classes.p1,
+                    'p2': oldClasses.p2 || initialState.classes.p2,
+                    'p5': oldClasses.p3 || initialState.classes.p5, 
+                    'p7': oldClasses.p4 || initialState.classes.p7, 
+                    'p8': oldClasses.p5 || oldClasses.p8 || initialState.classes.p8  
+                };
+                
+                Object.keys(initialState.classes).forEach(id => {
+                    appState.classes[id].name = initialState.classes[id].name;
+                });
+                
+                if (appState.activeClassId === 'p3') appState.activeClassId = 'p5'; 
+                else if (appState.activeClassId === 'p4') appState.activeClassId = 'p7';
+                else if (appState.activeClassId === 'p5' && !oldClasses.p8) appState.activeClassId = 'p8'; 
+                else if (!appState.classes[appState.activeClassId]) appState.activeClassId = 'p1';
+            }
+            
+            // 2. Migrate Tables
+            if (!appState.tables) appState.tables = [];
+            initialState.tables.forEach(initTable => {
+                const existingTable = appState.tables.find(t => t.id === initTable.id);
+                if (!existingTable) {
+                    appState.tables.push(JSON.parse(JSON.stringify(initTable))); 
+                } else {
+                    if (existingTable.name.startsWith('Table ')) { existingTable.name = initTable.name; }
+                    if (existingTable.maxSeats !== initTable.maxSeats) { existingTable.maxSeats = initTable.maxSeats; }
+                    if (existingTable.x === undefined || existingTable.y === undefined) {
+                        existingTable.x = initTable.x;
+                        existingTable.y = initTable.y;
+                    }
+                }
+            });
+            appState.tables = appState.tables.filter(table => 
+                initialState.tables.some(initTable => initTable.id === table.id)
+            );
+            appState.tables.sort((a, b) => a.id.localeCompare(b.id));
+
+            // 3. Migrate Room Features to new structure
+            if (!appState.roomFeatures) appState.roomFeatures = {};
+            
+            // Define default furniture with full properties
+            const defaultFurniture = {
+                'windows': { id: 'windows', name: 'WINDOWS', type: 'windows', x: 20, y: 100, w: 60, h: 400, color: FEATURE_DEFAULT_COLORS.windows },
+                'desk': { id: 'desk', name: 'Teacher Desk', type: 'desk', x: 50, y: 550, w: 150, h: 60, color: FEATURE_DEFAULT_COLORS.desk },
+                'smartboard': { id: 'smartboard', name: 'Smartboard', type: 'smartboard', x: 250, y: 400, w: 150, h: 40, color: FEATURE_DEFAULT_COLORS.smartboard },
+                'door': { id: 'door', name: 'Door', type: 'door', x: 750, y: 500, w: 80, h: 120, color: FEATURE_DEFAULT_COLORS.door }
+            };
+            
+            // Check if we need to migrate from old structure (just x/y) to new structure (id, name, type, x, y, w, h)
+            const needsMigration = Object.keys(appState.roomFeatures).length > 0 && 
+                                   Object.values(appState.roomFeatures).some(f => !f.id || !f.name || !f.type);
+            
+            if (needsMigration) {
+                // Migrate old roomFeatures to new structure
+                const migratedFeatures = {};
+                for (const featureId in appState.roomFeatures) {
+                    const oldFeature = appState.roomFeatures[featureId];
+                    const defaultFeature = defaultFurniture[featureId];
+                    if (defaultFeature) {
+                        migratedFeatures[featureId] = {
+                            id: featureId,
+                            name: defaultFeature.name,
+                            type: defaultFeature.type,
+                            x: oldFeature.x !== undefined ? oldFeature.x : defaultFeature.x,
+                            y: oldFeature.y !== undefined ? oldFeature.y : defaultFeature.y,
+                            w: oldFeature.w || defaultFeature.w,
+                            h: oldFeature.h || defaultFeature.h,
+                            color: oldFeature.color || defaultFeature.color
+                        };
+                    }
+                }
+                appState.roomFeatures = migratedFeatures;
+            }
+            
+            // Initialize default furniture if none exists
+            if (Object.keys(appState.roomFeatures).length === 0) {
+                appState.roomFeatures = JSON.parse(JSON.stringify(defaultFurniture));
+            }
+            
+            // Ensure all existing furniture has a color property
+            for (const featureId in appState.roomFeatures) {
+                const feature = appState.roomFeatures[featureId];
+                if (!feature.color) {
+                    feature.color = FEATURE_DEFAULT_COLORS[feature.type] || FEATURE_DEFAULT_COLORS.generic;
+                }
+            }
+
+            if (appState.isEditMode === undefined) {
+                appState.isEditMode = false;
+            }
+            
+            // Migrate displayOptions
+            if (!appState.displayOptions) {
+                appState.displayOptions = {
+                    nameFormat: 'full',
+                    textScale: 100,
+                    colorByGender: false
+                };
+            }
+            if (appState.displayOptions.nameFormat === undefined) {
+                appState.displayOptions.nameFormat = 'full';
+            }
+            if (appState.displayOptions.textScale === undefined) {
+                appState.displayOptions.textScale = 100;
+            }
+            if (appState.displayOptions.colorByGender === undefined) {
+                appState.displayOptions.colorByGender = false;
+            }
+            
+            // 4. Migrate Roster & Table Settings for all classes
+            for (const classId in initialState.classes) { 
+                if (!appState.classes[classId]) { 
+                    appState.classes[classId] = initialState.classes[classId];
+                }
+                
+                if (appState.classes[classId].roster && (appState.classes[classId].roster.length === 0 || typeof appState.classes[classId].roster[0] === 'string')) {
+                    appState.classes[classId].roster = appState.classes[classId].roster.map(name => ({ name: name, gender: 'U' }));
+                }
+                
+                appState.tables.forEach(table => {
+                    const settings = appState.classes[classId].tableSettings;
+                    if (settings[table.id] === undefined || typeof settings[table.id] === 'boolean') {
+                        const isUsed = settings[table.id] === undefined ? true : settings[table.id];
+                        settings[table.id] = {
+                            used: isUsed,
+                            maxSeats: table.maxSeats 
+                        };
+                    }
+                });
+                
+                if (appState.classes[classId].separations === undefined) {
+                    appState.classes[classId].separations = [];
+                }
+            }
+            
+            // 5. Finaly, update the URL to match the (potentially migrated) state
+            updateURLHash(true); // Force immediate update
+        }
+
+        // NEW: Save to both localStorage and URL hash
+        function saveState() {
+            // 1. Save to localStorage immediately
+            localStorage.setItem('seatingChartState', JSON.stringify(appState));
+            
+            // 2. Debounce the URL hash update
+            updateURLHash(false);
+        }
+
+        // NEW: Function to update the URL hash
+        function updateURLHash(force = false) {
+            if (saveTimeout) {
+                clearTimeout(saveTimeout);
+            }
+            
+            const updateAction = () => {
+                try {
+                    const jsonState = JSON.stringify(appState);
+                    const utf8String = unescape(encodeURIComponent(jsonState));
+                    const base64State = btoa(utf8String);
+                    // Use replaceState to not clog browser history
+                    window.history.replaceState(null, '', `#${base64State}`);
+                } catch (e) {
+                    console.error("Error updating URL hash:", e);
+                }
+            };
+
+            if (force) {
+                updateAction();
+            } else {
+                saveTimeout = setTimeout(updateAction, 500); // 0.5s debounce
+            }
+        }
+
+        // --- 2. DOM ELEMENT SELECTORS ---
         
-        // --- 2. DOM ELEMENTS ---
         const classSelector = document.getElementById('class-selector');
-        const editLayoutBtn = document.getElementById('edit-layout-btn');
+        const editLayoutBtn = document.getElementById('edit-layout-btn'); 
         const addFurnitureBtn = document.getElementById('add-furniture-btn');
         const fitToScreenBtn = document.getElementById('fit-to-screen-btn');
         const rosterInput = document.getElementById('roster-input');
         const saveRosterBtn = document.getElementById('save-roster-btn');
-        const manageRosterBtn = document.getElementById('manage-roster-btn');
+        const manageRosterBtn = document.getElementById('manage-roster-btn'); 
         const shuffleBtn = document.getElementById('shuffle-btn');
         const clearAssignmentsBtn = document.getElementById('clear-assignments-btn');
-        const shareLinkBtn = document.getElementById('share-link-btn');
-        const resetAllBtn = document.getElementById('reset-all-btn');
-        const canvas = document.getElementById('canvas');
-        const tableSettingsList = document.getElementById('table-settings-list');
+        const roomLayout = document.getElementById('room-layout');
+        const roomFeaturesContainer = document.getElementById('room-features');
+        const tableTogglesContainer = document.getElementById('table-toggles');
+        const shareLinkBtn = document.getElementById('share-link-btn'); // NEW
+        const resetAllBtn = document.getElementById('reset-all-btn'); 
         const checkLonelyBtn = document.getElementById('check-lonely-btn');
         
-        // Display options
+        // Display Options
         const nameFormatSelect = document.getElementById('name-format-select');
         const textSizeSlider = document.getElementById('text-size-slider');
         const textSizeValue = document.getElementById('text-size-value');
         const colorByGenderCheck = document.getElementById('color-by-gender-check');
         
-        // Roster Manager Modal
+        // Roster Modal
         const rosterManagerOverlay = document.getElementById('roster-manager-overlay');
+        const rosterManagerList = document.getElementById('roster-manager-list');
         const closeRosterModalBtn = document.getElementById('close-roster-modal-btn');
         const saveRosterManagerBtn = document.getElementById('save-roster-manager-btn');
-        const rosterManagerList = document.getElementById('roster-manager-list');
+        
+        // Separation Modal UI
         const sepStudent1 = document.getElementById('sep-student-1');
         const sepStudent2 = document.getElementById('sep-student-2');
         const addSeparationBtn = document.getElementById('add-separation-btn');
         const separationList = document.getElementById('separation-list');
         
-        // Shared Link Banner
-        const sharedLinkBanner = document.getElementById('shared-link-banner');
-        const saveSharedDataBtn = document.getElementById('save-shared-data-btn');
-        const dismissBannerBtn = document.getElementById('dismiss-banner-btn');
         
+        // --- 2B. HELPER FUNCTIONS ---
         
-        // --- 3. STORAGE & LOADING ---
-        
-        function saveState() {
-            // Only save to localStorage if NOT viewing a shared link
-            if (!isLoadedFromURL) {
-                localStorage.setItem('seatingChartState', JSON.stringify(appState));
-            }
-        }
-        
-        function loadState() {
-            // Check for URL hash data first
-            const hash = window.location.hash;
-            if (hash.startsWith('#data=')) {
-                try {
-                    const encodedData = hash.slice(6);
-                    const jsonString = decodeURIComponent(encodedData);
-                    const loadedState = JSON.parse(jsonString);
-                    
-                    // Load the shared state
-                    appState = loadedState;
-                    isLoadedFromURL = true;
-                    
-                    // Show banner
-                    sharedLinkBanner.classList.add('visible');
-                    
-                    console.log('Loaded state from URL hash');
-                    return;
-                } catch (e) {
-                    console.error('Failed to parse URL data:', e);
-                    alert('Failed to load shared link data. Starting fresh.');
+        // Get the current zoom/scale of the room layout
+        function getRoomZoom() {
+            const roomLayout = document.getElementById('room-layout');
+            const transform = window.getComputedStyle(roomLayout).transform;
+            
+            if (transform && transform !== 'none') {
+                // Parse matrix(a, b, c, d, e, f) or matrix3d(...) where first param is scaleX
+                const matrixMatch = transform.match(/matrix(?:3d)?\(([^,]+)/);
+                if (matrixMatch && matrixMatch[1]) {
+                    return parseFloat(matrixMatch[1]);
                 }
             }
+            return 1.0; // Default scale is 1
+        }
+        
+        // Get minimum size for a furniture type
+        function getMinimumSize(featureType) {
+            const minimums = {
+                'windows': { w: 40, h: 120 },
+                'desk': { w: 80, h: 40 },
+                'smartboard': { w: 80, h: 30 },
+                'door': { w: 40, h: 60 },
+                'generic': { w: 40, h: 24 }
+            };
+            return minimums[featureType] || minimums['generic'];
+        }
+        
+        function formatStudentName(fullName, format) {
+            if (!fullName) return fullName;
             
-            // Otherwise load from localStorage
-            const saved = localStorage.getItem('seatingChartState');
-            if (saved) {
-                try {
-                    appState = JSON.parse(saved);
-                    console.log('Loaded state from localStorage');
-                } catch (e) {
-                    console.error('Failed to parse localStorage:', e);
-                }
+            if (format === 'full') {
+                return fullName;
+            } else if (format === 'firstLast') {
+                const parts = fullName.trim().split(/\s+/);
+                if (parts.length === 1) return parts[0];
+                const firstName = parts[0];
+                const lastInitial = parts[parts.length - 1][0];
+                return `${firstName} ${lastInitial}.`;
+            } else if (format === 'first') {
+                const parts = fullName.trim().split(/\s+/);
+                return parts[0];
             }
+            return fullName;
         }
         
-        function handleSaveSharedData() {
-            // Save the URL data to localStorage
-            localStorage.setItem('seatingChartState', JSON.stringify(appState));
-            isLoadedFromURL = false;
-            sharedLinkBanner.classList.remove('visible');
-            
-            // Clear the URL hash
-            history.replaceState(null, null, ' ');
-            
-            alert('Seating chart saved to your browser!');
-        }
-        
-        function handleDismissBanner() {
-            sharedLinkBanner.classList.remove('visible');
-        }
-        
-        
-        // --- 4. RENDERING ---
-        
-        function render() {
-            renderClassSelector();
-            renderRosterInput();
-            renderCanvas();
-            renderTableSettings();
-            renderDisplayOptions();
-        }
-        
-        function renderClassSelector() {
-            classSelector.innerHTML = '';
-            appState.classes.forEach(cls => {
-                const option = document.createElement('option');
-                option.value = cls.id;
-                option.textContent = cls.name;
-                if (cls.id === appState.activeClassId) {
-                    option.selected = true;
-                }
-                classSelector.appendChild(option);
-            });
-        }
-        
-        function renderRosterInput() {
-            const activeClass = appState.classes.find(c => c.id === appState.activeClassId);
-            if (!activeClass) return;
-            
-            const rosterText = activeClass.roster.map(s => s.name).join('\n');
-            rosterInput.value = rosterText;
-        }
-        
-        function renderCanvas() {
-            canvas.innerHTML = '';
-            
-            if (appState.editMode) {
-                const indicator = document.createElement('div');
-                indicator.className = 'edit-mode-indicator';
-                indicator.textContent = '✏️ Edit Mode';
-                canvas.appendChild(indicator);
-                canvas.classList.add('edit-mode');
-            } else {
-                canvas.classList.remove('edit-mode');
-            }
-            
-            const activeClass = appState.classes.find(c => c.id === appState.activeClassId);
-            if (!activeClass) return;
-            
-            appState.tables.forEach(table => {
-                const tableEl = createTableElement(table, activeClass);
-                canvas.appendChild(tableEl);
-            });
-        }
-        
-        function createTableElement(table, activeClass) {
-            const tableEl = document.createElement('div');
-            tableEl.className = 'table';
-            tableEl.dataset.tableId = table.id;
-            tableEl.style.left = table.x + 'px';
-            tableEl.style.top = table.y + 'px';
-            
-            if (appState.editMode) {
-                tableEl.classList.add('grabbable');
-            }
-            
-            // Determine table dimensions and seat layout
-            let seatCount = 0;
-            let gridColumns = 2;
-            let tableWidth = 'var(--table-w-4)';
-            
-            if (table.type === 'round') {
-                seatCount = 4;
-                gridColumns = 2;
-                tableWidth = 'var(--table-w-4)';
-            } else if (table.type === 'newton') {
-                seatCount = 5;
-                gridColumns = 3;
-                tableWidth = 'var(--table-w-5-land)';
-            }
-            
-            tableEl.style.width = tableWidth;
-            
-            const header = document.createElement('div');
-            header.className = 'table-header';
-            header.textContent = table.name;
-            tableEl.appendChild(header);
-            
-            const removeBtn = document.createElement('button');
-            removeBtn.className = 'remove-table-btn';
-            removeBtn.textContent = '×';
-            removeBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                handleRemoveTable(table.id);
-            });
-            tableEl.appendChild(removeBtn);
-            
-            const seatsContainer = document.createElement('div');
-            seatsContainer.className = 'seats';
-            seatsContainer.style.gridTemplateColumns = `repeat(${gridColumns}, var(--chip-w))`;
-            
-            for (let i = 0; i < seatCount; i++) {
-                const seatId = `${table.id}-s${i}`;
-                const studentName = activeClass.assignments[seatId] || '';
-                const seatEl = createSeatElement(seatId, studentName, activeClass);
-                seatsContainer.appendChild(seatEl);
-            }
-            
-            tableEl.appendChild(seatsContainer);
-            
-            if (appState.editMode) {
-                makeTableDraggable(tableEl, table);
-            }
-            
-            return tableEl;
-        }
-        
-        function createSeatElement(seatId, studentName, activeClass) {
-            const seatEl = document.createElement('div');
-            seatEl.className = 'seat';
-            seatEl.dataset.seatId = seatId;
+        function getGenderClass(studentName, activeClass) {
+            if (!appState.displayOptions.colorByGender) return '';
             
             const student = activeClass.roster.find(s => s.name === studentName);
+            if (!student) return '';
             
-            if (studentName) {
-                seatEl.classList.add('occupied');
-                seatEl.textContent = formatStudentName(studentName);
-                
-                if (appState.displayOptions.colorByGender && student) {
-                    if (student.gender === 'M') {
-                        seatEl.classList.add('gender-m');
-                    } else if (student.gender === 'F') {
-                        seatEl.classList.add('gender-f');
-                    }
-                }
-                
-                if (student && student.locked && student.locked === seatId) {
-                    seatEl.classList.add('locked');
-                    const lockIcon = document.createElement('span');
-                    lockIcon.className = 'lock-icon';
-                    lockIcon.textContent = '🔒';
-                    seatEl.appendChild(lockIcon);
-                }
-            } else {
-                seatEl.textContent = '—';
-            }
-            
-            seatEl.addEventListener('click', () => handleSeatClick(seatId));
-            
-            return seatEl;
+            if (student.gender === 'M') return 'gender-m';
+            if (student.gender === 'F') return 'gender-f';
+            return '';
         }
         
-        function formatStudentName(fullName) {
-            const format = appState.displayOptions.nameFormat;
-            const parts = fullName.trim().split(/\s+/);
-            
-            if (parts.length === 1) return fullName;
-            
-            const first = parts[0];
-            const last = parts[parts.length - 1];
-            
-            switch (format) {
-                case 'first': return first;
-                case 'last': return last;
-                case 'fl': return `${first.charAt(0)}. ${last}`;
-                case 'lf': return `${last}, ${first.charAt(0)}.`;
-                case 'full':
-                default: return fullName;
-            }
+        function applyTextScale() {
+            const scale = appState.displayOptions.textScale / 100;
+            document.documentElement.style.setProperty('--text-scale', scale);
+            textSizeValue.textContent = appState.displayOptions.textScale + '%';
         }
+
+
+        // --- 3. RENDERING FUNCTIONS ---
         
-        function renderTableSettings() {
-            tableSettingsList.innerHTML = '';
+        function render() {
+            if (!appState || !appState.classes) return; // Failsafe
+            
+            if (!appState.classes[appState.activeClassId]) {
+                appState.activeClassId = 'p1';
+            }
+            const activeClass = appState.classes[appState.activeClassId];
+            
+            document.body.classList.toggle('layout-edit-mode', appState.isEditMode);
+            editLayoutBtn.textContent = appState.isEditMode ? 'Save Layout' : 'Edit Layout';
+            editLayoutBtn.classList.toggle('danger', appState.isEditMode);
+            
+            // Show/hide Add Furniture button based on edit mode
+            addFurnitureBtn.style.display = appState.isEditMode ? 'inline-block' : 'none';
+            
+            // Update Fit to Screen button text based on current zoom state
+            const currentZoom = getRoomZoom();
+            fitToScreenBtn.textContent = currentZoom !== 1.0 ? 'Reset Zoom' : 'Fit to Screen';
+
+            shuffleBtn.disabled = appState.isEditMode;
+            clearAssignmentsBtn.disabled = appState.isEditMode;
+            checkLonelyBtn.disabled = appState.isEditMode;
+            
+            // Apply display options
+            applyTextScale();
+            nameFormatSelect.value = appState.displayOptions.nameFormat;
+            textSizeSlider.value = appState.displayOptions.textScale;
+            colorByGenderCheck.checked = appState.displayOptions.colorByGender;
+            
+            renderClassSelector();
+            rosterInput.value = activeClass.roster.map(student => student.name).join('\n');
+            renderRoom();
+            renderRoomFeatures(); 
+            renderTableToggles();
+            updateRoomLayoutSize();
+        }
+
+        function renderClassSelector() {
+            classSelector.innerHTML = ''; 
+            const classList = getInitialState().classes;
+            for (const classId in classList) {
+                const classData = classList[classId];
+                const option = document.createElement('option');
+                option.value = classId;
+                option.textContent = classData.name;
+                classSelector.appendChild(option);
+            }
+            classSelector.value = appState.activeClassId;
+        }
+
+        function renderRoom() {
+            // Clear only tables, not the room-features container
+            const tables = roomLayout.querySelectorAll('.table');
+            tables.forEach(table => table.remove());
+            
+            const activeClass = appState.classes[appState.activeClassId];
+            const assignments = activeClass.assignments; 
+            const lockedStudents = activeClass.locked || []; 
             
             appState.tables.forEach(table => {
-                const row = document.createElement('div');
-                row.className = 'table-setting-row';
+                const classTableSettings = activeClass.tableSettings[table.id];
+                if (!classTableSettings) return; // Failsafe for migration
+                const seatsToRender = classTableSettings.maxSeats;
                 
-                const label = document.createElement('label');
-                label.textContent = table.name;
-                label.title = table.name;
+                const tableEl = document.createElement('div');
+                tableEl.className = 'table';
+                tableEl.dataset.tableId = table.id;
+                tableEl.dataset.used = classTableSettings.used; 
+                tableEl.dataset.maxSeats = table.maxSeats; 
+                tableEl.style.left = table.x + 'px';
+                tableEl.style.top = table.y + 'px';
+                
+                // Apply saved width and height if available
+                if (table.w) {
+                    tableEl.style.width = table.w + 'px';
+                }
+                if (table.h) {
+                    tableEl.style.height = table.h + 'px';
+                }
+                
+                const tableHeader = document.createElement('div');
+                tableHeader.className = 'table-header';
                 
                 const nameInput = document.createElement('input');
                 nameInput.type = 'text';
+                nameInput.className = 'table-name-input';
                 nameInput.value = table.name;
-                nameInput.style.fontSize = '0.9rem';
-                nameInput.style.padding = '0.3rem 0.5rem';
-                nameInput.addEventListener('change', (e) => {
-                    table.name = e.target.value || `Table ${table.id}`;
-                    saveState();
-                    render();
-                });
+                nameInput.dataset.tableId = table.id;
+                nameInput.addEventListener('change', handleTableNameChange);
+                nameInput.addEventListener('mousedown', (e) => e.stopPropagation()); 
                 
-                const typeSelect = document.createElement('select');
-                typeSelect.style.fontSize = '0.9rem';
-                typeSelect.style.padding = '0.3rem 0.5rem';
+                tableHeader.appendChild(nameInput);
+                tableEl.appendChild(tableHeader);
+
+                addTableDragListeners(tableEl, tableHeader, table);
+                attachTableResizeObserver(tableEl, table.id);
+
+                const seatContainer = document.createElement('div');
+                seatContainer.className = 'seat-container';
                 
-                const roundOpt = document.createElement('option');
-                roundOpt.value = 'round';
-                roundOpt.textContent = 'Round (4)';
-                typeSelect.appendChild(roundOpt);
-                
-                const newtonOpt = document.createElement('option');
-                newtonOpt.value = 'newton';
-                newtonOpt.textContent = 'Newton (5)';
-                typeSelect.appendChild(newtonOpt);
-                
-                typeSelect.value = table.type;
-                typeSelect.addEventListener('change', (e) => {
-                    table.type = e.target.value;
+                for (let i = 1; i <= seatsToRender; i++) {
+                    const seatId = `${table.id}-s${i}`;
+                    const studentName = assignments[seatId];
                     
-                    // Clear assignments for this table
-                    const activeClass = appState.classes.find(c => c.id === appState.activeClassId);
-                    if (activeClass) {
-                        for (let key in activeClass.assignments) {
-                            if (key.startsWith(table.id + '-')) {
-                                delete activeClass.assignments[key];
-                            }
+                    const seatEl = document.createElement('div');
+                    seatEl.className = 'seat';
+                    seatEl.dataset.seatId = seatId;
+                    
+                    if (studentName) {
+                        const displayName = formatStudentName(studentName, appState.displayOptions.nameFormat);
+                        seatEl.textContent = displayName;
+                        seatEl.classList.add('filled');
+                        seatEl.draggable = true; 
+                        seatEl.dataset.studentName = studentName;
+                        
+                        // Add gender class
+                        const genderClass = getGenderClass(studentName, activeClass);
+                        if (genderClass) {
+                            seatEl.classList.add(genderClass);
                         }
+                        
+                        if (lockedStudents.includes(studentName)) {
+                            seatEl.classList.add('locked');
+                        }
+                    } else {
+                        seatEl.textContent = 'Empty';
+                        seatEl.classList.add('empty');
                     }
                     
-                    saveState();
-                    render();
-                });
+                    addSeatListeners(seatEl);
+                    seatContainer.appendChild(seatEl);
+                }
                 
-                row.appendChild(label);
-                row.appendChild(nameInput);
-                row.appendChild(typeSelect);
-                tableSettingsList.appendChild(row);
+                tableEl.appendChild(seatContainer);
+                roomLayout.appendChild(tableEl);
             });
         }
         
-        function renderDisplayOptions() {
-            nameFormatSelect.value = appState.displayOptions.nameFormat;
-            textSizeSlider.value = appState.displayOptions.textScale * 100;
-            textSizeValue.textContent = Math.round(appState.displayOptions.textScale * 100) + '%';
-            colorByGenderCheck.checked = appState.displayOptions.colorByGender;
+        function renderRoomFeatures() {
+            if (!roomFeaturesContainer) return;
             
-            document.documentElement.style.setProperty('--text-scale', appState.displayOptions.textScale);
+            roomFeaturesContainer.innerHTML = '';
+            
+            for (const featureId in appState.roomFeatures) {
+                const feature = appState.roomFeatures[featureId];
+                
+                const featureEl = document.createElement('div');
+                featureEl.className = 'room-feature';
+                featureEl.classList.add(`type-${feature.type}`);
+                featureEl.dataset.featureId = featureId;
+                
+                // Apply position and size from state (unscaled logical values)
+                featureEl.style.left = feature.x + 'px';
+                featureEl.style.top = feature.y + 'px';
+                featureEl.style.width = feature.w + 'px';
+                featureEl.style.height = feature.h + 'px';
+                
+                // Apply saved color
+                if (feature.color) {
+                    featureEl.style.backgroundColor = feature.color;
+                }
+                
+                // Title (contenteditable in edit mode)
+                const titleEl = document.createElement('div');
+                titleEl.className = 'room-feature-title';
+                titleEl.textContent = feature.name;
+                titleEl.contentEditable = appState.isEditMode;
+                titleEl.addEventListener('blur', (e) => {
+                    const newName = e.target.textContent.trim();
+                    if (newName && newName !== feature.name) {
+                        feature.name = newName;
+                        saveState();
+                    } else if (!newName) {
+                        e.target.textContent = feature.name; // Revert if empty
+                    }
+                });
+                titleEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.target.blur();
+                    }
+                });
+                featureEl.appendChild(titleEl);
+                
+                // Color picker (visible only in edit mode)
+                const colorPicker = document.createElement('input');
+                colorPicker.type = 'color';
+                colorPicker.className = 'feature-color-picker';
+                colorPicker.value = feature.color || FEATURE_DEFAULT_COLORS[feature.type] || FEATURE_DEFAULT_COLORS.generic;
+                colorPicker.addEventListener('input', (e) => {
+                    const newColor = e.target.value;
+                    feature.color = newColor;
+                    featureEl.style.backgroundColor = newColor;
+                    saveState();
+                });
+                colorPicker.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent dragging when clicking color picker
+                });
+                featureEl.appendChild(colorPicker);
+                
+                // Close button (visible only in edit mode)
+                const closeBtn = document.createElement('button');
+                closeBtn.className = 'room-feature-close';
+                closeBtn.textContent = '×';
+                closeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (confirm(`Remove ${feature.name}?`)) {
+                        delete appState.roomFeatures[featureId];
+                        saveState();
+                        render();
+                    }
+                });
+                featureEl.appendChild(closeBtn);
+                
+                // Add drag and resize listeners
+                makeFeatureDraggable(featureEl, featureId);
+                attachFeatureResizeObserver(featureEl, featureId);
+                
+                roomFeaturesContainer.appendChild(featureEl);
+            }
         }
         
+        function renderTableToggles() {
+            tableTogglesContainer.innerHTML = '';
+            const activeClass = appState.classes[appState.activeClassId];
+            
+            appState.tables.forEach(table => {
+                const classTableSettings = activeClass.tableSettings[table.id];
+                if (!classTableSettings) return; // Failsafe for migration
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = 'table-setting-row';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `toggle-${table.id}`;
+                checkbox.dataset.tableId = table.id;
+                checkbox.checked = classTableSettings.used;
+                checkbox.addEventListener('change', handleTableToggle);
+                
+                const label = document.createElement('label');
+                label.htmlFor = `toggle-${table.id}`;
+                label.textContent = table.name;
+                label.title = table.name;
+                
+                const select = document.createElement('select');
+                select.dataset.tableId = table.id;
+                for (let i = 1; i <= table.maxSeats; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = i;
+                    select.appendChild(option);
+                }
+                select.value = classTableSettings.maxSeats;
+                select.addEventListener('change', handleSeatCountChange);
+                
+                wrapper.appendChild(checkbox);
+                wrapper.appendChild(label);
+                wrapper.appendChild(select);
+                tableTogglesContainer.appendChild(wrapper);
+            });
+        }
         
-        // --- 5. EVENT HANDLERS ---
+        function updateRoomLayoutSize() {
+            // Compute the bounding box of all tables and features
+            const tables = document.querySelectorAll('.table');
+            const features = document.querySelectorAll('.room-feature');
+            
+            let maxX = 900; // minimum width
+            let maxY = 700; // minimum height
+            
+            tables.forEach(table => {
+                const rect = table.getBoundingClientRect();
+                const container = document.querySelector('.room-container').getBoundingClientRect();
+                const right = table.offsetLeft + table.offsetWidth;
+                const bottom = table.offsetTop + table.offsetHeight;
+                
+                if (right > maxX) maxX = right;
+                if (bottom > maxY) maxY = bottom;
+            });
+            
+            features.forEach(feature => {
+                const right = feature.offsetLeft + feature.offsetWidth;
+                const bottom = feature.offsetTop + feature.offsetHeight;
+                
+                if (right > maxX) maxX = right;
+                if (bottom > maxY) maxY = bottom;
+            });
+            
+            // Add padding
+            roomLayout.style.width = (maxX + 100) + 'px';
+            roomLayout.style.height = (maxY + 100) + 'px';
+        }
         
-        function handleClassChange() {
-            appState.activeClassId = classSelector.value;
-            saveState();
+        function handleFitToScreen() {
+            const roomContainer = document.querySelector('.room-container');
+            const roomLayout = document.getElementById('room-layout');
+            
+            // Get current transform
+            const currentTransform = window.getComputedStyle(roomLayout).transform;
+            const isScaled = currentTransform && currentTransform !== 'none';
+            
+            if (isScaled) {
+                // Reset to normal view
+                roomLayout.style.transform = 'none';
+                roomLayout.style.transformOrigin = 'top left';
+            } else {
+                // Calculate scale to fit
+                const containerWidth = roomContainer.clientWidth;
+                const containerHeight = roomContainer.clientHeight;
+                const layoutWidth = roomLayout.offsetWidth;
+                const layoutHeight = roomLayout.offsetHeight;
+                
+                // Calculate scale factors for width and height
+                const scaleX = containerWidth / layoutWidth;
+                const scaleY = containerHeight / layoutHeight;
+                
+                // Use the smaller scale to ensure everything fits
+                const scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
+                
+                // Apply transform
+                roomLayout.style.transform = `scale(${scale})`;
+                roomLayout.style.transformOrigin = 'top left';
+                
+                // Scroll to top-left
+                roomContainer.scrollTo(0, 0);
+            }
+        }
+
+        // --- 4. EVENT HANDLERS ---
+        
+        function handleClassChange(e) {
+            appState.activeClassId = e.target.value;
+            saveState(); 
             render();
         }
         
         function handleToggleEditMode() {
-            appState.editMode = !appState.editMode;
-            editLayoutBtn.textContent = appState.editMode ? 'Done Editing' : 'Edit Layout';
-            addFurnitureBtn.style.display = appState.editMode ? 'inline-block' : 'none';
-            render();
-        }
-        
-        function handleAddFurniture() {
-            const newTable = {
-                id: `t${appState.nextTableId++}`,
-                name: `Table ${appState.nextTableId - 1}`,
-                type: 'round',
-                x: 100,
-                y: 100
-            };
-            appState.tables.push(newTable);
+            appState.isEditMode = !appState.isEditMode;
             saveState();
             render();
         }
         
-        function handleRemoveTable(tableId) {
-            if (!confirm('Remove this table and all its seat assignments?')) return;
+        function handleTableNameChange(e) {
+            const tableId = e.target.dataset.tableId;
+            const newName = e.target.value.trim();
             
-            appState.tables = appState.tables.filter(t => t.id !== tableId);
-            
-            appState.classes.forEach(cls => {
-                for (let key in cls.assignments) {
-                    if (key.startsWith(tableId + '-')) {
-                        delete cls.assignments[key];
-                    }
+            if (newName) {
+                const table = appState.tables.find(t => t.id === tableId);
+                if (table) {
+                    table.name = newName;
+                    saveState();
+                    renderTableToggles(); 
                 }
-            });
-            
-            saveState();
-            render();
+            } else {
+                e.target.value = appState.tables.find(t => t.id === tableId).name;
+            }
         }
-        
-        function handleFitToScreen() {
-            const container = document.querySelector('.canvas-container');
-            const canvasEl = document.getElementById('canvas');
-            
-            let maxX = 0, maxY = 0;
-            appState.tables.forEach(table => {
-                const tableWidth = table.type === 'newton' ? 360 : 240;
-                const tableHeight = 150;
-                maxX = Math.max(maxX, table.x + tableWidth);
-                maxY = Math.max(maxY, table.y + tableHeight);
-            });
-            
-            const contentWidth = maxX + 100;
-            const contentHeight = maxY + 100;
-            
-            const containerWidth = container.clientWidth - 80;
-            const containerHeight = container.clientHeight - 80;
-            
-            const scaleX = containerWidth / contentWidth;
-            const scaleY = containerHeight / contentHeight;
-            const scale = Math.min(scaleX, scaleY, 1.0);
-            
-            canvasEl.style.transform = `scale(${scale})`;
-            canvasEl.style.minWidth = contentWidth + 'px';
-            canvasEl.style.minHeight = contentHeight + 'px';
-        }
-        
+
         function handleSaveRoster() {
-            const activeClass = appState.classes.find(c => c.id === appState.activeClassId);
-            if (!activeClass) return;
+            const activeClass = appState.classes[appState.activeClassId];
+            const newNames = rosterInput.value
+                .split('\n')
+                .map(name => name.trim())
+                .filter(name => name.length > 0);
             
-            const lines = rosterInput.value.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            
+            const newNameSet = new Set(newNames);
+            const oldRoster = activeClass.roster || [];
             const newRoster = [];
-            const existingMap = {};
-            activeClass.roster.forEach(student => {
-                existingMap[student.name] = student;
-            });
             
-            lines.forEach(name => {
-                if (existingMap[name]) {
-                    newRoster.push(existingMap[name]);
-                } else {
-                    newRoster.push({ name: name, gender: 'U', locked: null });
+            oldRoster.forEach(student => {
+                if (newNameSet.has(student.name)) {
+                    newRoster.push(student);
                 }
             });
             
-            const removedNames = activeClass.roster.map(s => s.name).filter(name => !lines.includes(name));
-            removedNames.forEach(name => {
-                for (let seatId in activeClass.assignments) {
-                    if (activeClass.assignments[seatId] === name) {
-                        delete activeClass.assignments[seatId];
-                    }
+            const existingNameSet = new Set(newRoster.map(s => s.name));
+            newNames.forEach(name => {
+                if (!existingNameSet.has(name)) {
+                    newRoster.push({ name: name, gender: 'U' }); 
                 }
             });
             
             activeClass.roster = newRoster;
             
+            const rosterNameSet = new Set(activeClass.roster.map(s => s.name));
+            for (const seatId in activeClass.assignments) {
+                if (!rosterNameSet.has(activeClass.assignments[seatId])) {
+                    delete activeClass.assignments[seatId];
+                }
+            }
+            activeClass.locked = activeClass.locked.filter(name => rosterNameSet.has(name));
+            
+            alert(`Roster for ${activeClass.name} saved!`);
             saveState();
             render();
-            alert('Roster saved!');
         }
+        
+        function handleTableToggle(e) {
+            const tableId = e.target.dataset.tableId;
+            const isChecked = e.target.checked;
+            const activeClass = appState.classes[appState.activeClassId];
+            
+            activeClass.tableSettings[tableId].used = isChecked;
+            
+            if (!isChecked) {
+                for (const seatId in activeClass.assignments) {
+                    if (seatId.startsWith(tableId)) {
+                        delete activeClass.assignments[seatId];
+                    }
+                }
+            }
+            saveState();
+            render(); 
+        }
+        
+        function handleSeatCountChange(e) {
+            const tableId = e.target.dataset.tableId;
+            const newCount = parseInt(e.target.value, 10);
+            const activeClass = appState.classes[appState.activeClassId];
+            
+            activeClass.tableSettings[tableId].maxSeats = newCount;
+            
+            for (const seatId in activeClass.assignments) {
+                if (seatId.startsWith(tableId)) {
+                    const seatNum = parseInt(seatId.split('-s')[1], 10);
+                    if (seatNum > newCount) {
+                        delete activeClass.assignments[seatId];
+                    }
+                }
+            }
+            saveState();
+            render();
+        }
+        
+        function handleNameFormatChange(e) {
+            appState.displayOptions.nameFormat = e.target.value;
+            saveState();
+            render();
+        }
+        
+        function handleTextSizeChange(e) {
+            appState.displayOptions.textScale = parseInt(e.target.value, 10);
+            saveState();
+            render();
+        }
+        
+        function handleColorByGenderChange(e) {
+            appState.displayOptions.colorByGender = e.target.checked;
+            saveState();
+            render();
+        }
+        
+        // --- 5. CORE LOGIC: SHUFFLE, LOCK, DRAG/DROP ---
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function handleShuffle() {
+            if (appState.isEditMode) return; 
+            
+            const activeClass = appState.classes[appState.activeClassId];
+            const assignments = activeClass.assignments;
+            const lockedStudents = activeClass.locked || [];
+            
+            const studentsToShuffle = activeClass.roster.filter(student => !lockedStudents.includes(student.name));
+            shuffleArray(studentsToShuffle);
+
+            const seatFillQueue = [];
+            const activeTables = appState.tables.filter(t => activeClass.tableSettings[t.id].used);
+            
+            let maxDepth = 0;
+            activeTables.forEach(t => {
+                const tableMax = activeClass.tableSettings[t.id].maxSeats;
+                if (tableMax > maxDepth) maxDepth = tableMax;
+            });
+
+            for (let i = 1; i <= maxDepth; i++) {
+                shuffleArray(activeTables); 
+                for (const table of activeTables) {
+                    const classSettings = activeClass.tableSettings[table.id];
+                    
+                    if (i <= classSettings.maxSeats) {
+                        const seatId = `${table.id}-s${i}`;
+                        const studentInSeat = assignments[seatId];
+                        
+                        if (!studentInSeat || !lockedStudents.includes(studentInSeat)) {
+                            seatFillQueue.push(seatId);
+                        }
+                    }
+                }
+            }
+
+            for (const seatId in assignments) {
+                const studentName = assignments[seatId];
+                if (studentsToShuffle.some(s => s.name === studentName)) {
+                    delete assignments[seatId];
+                }
+            }
+            
+            const numAssignments = Math.min(studentsToShuffle.length, seatFillQueue.length);
+            for (let i = 0; i < numAssignments; i++) {
+                assignments[seatFillQueue[i]] = studentsToShuffle[i].name; 
+            }
+            
+            saveState();
+            checkSeparations(); 
+            checkLonelyStudents(true); 
+            render();
+        }
+
+        function handleClearAssignments() {
+            if (appState.isEditMode) return;
+            if (!confirm('Are you sure you want to clear all assignments for this class? (Locked students will be unlocked and unassigned).')) {
+                return;
+            }
+            const activeClass = appState.classes[appState.activeClassId];
+            activeClass.assignments = {};
+            activeClass.locked = [];
+            
+            saveState();
+            render();
+        }
+
+        function addSeatListeners(seatEl) {
+            const studentName = seatEl.dataset.studentName;
+            
+            if (studentName) {
+                seatEl.addEventListener('click', () => {
+                    if (appState.isEditMode) return; 
+                    
+                    const activeClass = appState.classes[appState.activeClassId];
+                    const lockedStudents = activeClass.locked;
+                    
+                    if (lockedStudents.includes(studentName)) {
+                        activeClass.locked = lockedStudents.filter(name => name !== studentName);
+                    } else {
+                        lockedStudents.push(studentName);
+                    }
+                    saveState();
+                    render(); 
+                });
+            }
+
+            seatEl.addEventListener('dragstart', (e) => {
+                if (appState.isEditMode) { e.preventDefault(); return; } 
+                
+                if (studentName) {
+                    draggedStudent = studentName;
+                    e.dataTransfer.setData('text/plain', studentName);
+                    e.dataTransfer.effectAllowed = 'move';
+                    setTimeout(() => e.target.classList.add('dragging'), 0);
+                } else {
+                    e.preventDefault(); 
+                }
+            });
+
+            seatEl.addEventListener('dragend', (e) => {
+                if (appState.isEditMode) return;
+                draggedStudent = null;
+                e.target.classList.remove('dragging');
+            });
+            
+            seatEl.addEventListener('dragover', (e) => {
+                if (appState.isEditMode) return;
+                e.preventDefault(); 
+                e.dataTransfer.dropEffect = 'move';
+            });
+            
+            seatEl.addEventListener('drop', (e) => {
+                if (appState.isEditMode || !draggedStudent) { e.preventDefault(); return; }
+                e.preventDefault();
+                
+                const sourceStudent = draggedStudent;
+                const targetSeatId = e.currentTarget.dataset.seatId;
+                const targetStudent = e.currentTarget.dataset.studentName; 
+                
+                const activeClass = appState.classes[appState.activeClassId];
+                const assignments = activeClass.assignments;
+                
+                let sourceSeatId = null;
+                for (const seatId in assignments) {
+                    if (assignments[seatId] === sourceStudent) {
+                        sourceSeatId = seatId;
+                        break;
+                    }
+                }
+                
+                if (sourceSeatId === targetSeatId) return; 
+                assignments[targetSeatId] = sourceStudent;
+                if (targetStudent) {
+                    assignments[sourceSeatId] = targetStudent; // Swap
+                } else {
+                    delete assignments[sourceSeatId]; // Move
+                }
+                
+                draggedStudent = null;
+                saveState();
+                render();
+            });
+        }
+        
+        function addTableDragListeners(tableEl, tableHeaderEl, table) {
+            let offsetX, offsetY, isDragging = false;
+            const room = document.querySelector('.room-container');
+
+            function onMouseDown(e) {
+                if (!appState.isEditMode || e.button !== 0) return; 
+                
+                isDragging = true;
+                tableEl.classList.add('dragging-table');
+                
+                const rect = tableEl.getBoundingClientRect();
+                offsetX = e.clientX - rect.left;
+                offsetY = e.clientY - rect.top;
+
+                e.preventDefault();
+                
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            }
+
+            function onMouseMove(e) {
+                if (!isDragging) return;
+                
+                const roomRect = room.getBoundingClientRect();
+                let newX = e.clientX - roomRect.left - offsetX;
+                let newY = e.clientY - roomRect.top - offsetY;
+                
+                newX = Math.max(0, Math.min(newX, roomRect.width - tableEl.offsetWidth));
+                newY = Math.max(0, Math.min(newY, roomRect.height - tableEl.offsetHeight));
+                
+                table.x = newX;
+                table.y = newY;
+
+                tableEl.style.left = newX + 'px';
+                tableEl.style.top = newY + 'px';
+            }
+
+            function onMouseUp() {
+                if (!isDragging) return;
+                isDragging = false;
+                tableEl.classList.remove('dragging-table');
+                
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                
+                saveState(); 
+            }
+
+            tableHeaderEl.addEventListener('mousedown', onMouseDown);
+        }
+
+        function makeFeatureDraggable(featureEl, featureId) {
+            let startX, startY, startFeatureX, startFeatureY, isDragging = false;
+            const room = document.querySelector('.room-container');
+
+            function onMouseDown(e) {
+                if (!appState.isEditMode || e.button !== 0) return;
+                
+                // Don't drag if clicking on close button or title
+                if (e.target.classList.contains('room-feature-close') || 
+                    e.target.classList.contains('room-feature-title')) {
+                    return;
+                }
+                
+                isDragging = true;
+                featureEl.style.zIndex = 1001; 
+                
+                // Store starting mouse position and feature position
+                const feature = appState.roomFeatures[featureId];
+                startX = e.clientX;
+                startY = e.clientY;
+                startFeatureX = feature.x;
+                startFeatureY = feature.y;
+
+                e.preventDefault();
+                
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            }
+
+            function onMouseMove(e) {
+                if (!isDragging) return;
+                
+                // Get current zoom scale
+                const zoom = getRoomZoom();
+                
+                // Calculate delta in screen pixels, then normalize by zoom
+                const dx = (e.clientX - startX) / zoom;
+                const dy = (e.clientY - startY) / zoom;
+                
+                // Apply delta to starting position
+                let newX = startFeatureX + dx;
+                let newY = startFeatureY + dy;
+                
+                // Clamp to non-negative values
+                newX = Math.max(0, newX);
+                newY = Math.max(0, newY);
+                
+                // Update state and DOM with rounded values
+                const roundedX = Math.round(newX);
+                const roundedY = Math.round(newY);
+                appState.roomFeatures[featureId].x = roundedX;
+                appState.roomFeatures[featureId].y = roundedY;
+
+                featureEl.style.left = roundedX + 'px';
+                featureEl.style.top = roundedY + 'px';
+            }
+
+            function onMouseUp() {
+                if (!isDragging) return;
+                isDragging = false;
+                featureEl.style.zIndex = ''; 
+                
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                
+                saveState(); 
+            }
+
+            featureEl.addEventListener('mousedown', onMouseDown);
+        }
+        
+        function attachFeatureResizeObserver(featureEl, featureId) {
+            if (!window.ResizeObserver) return; // Fallback for older browsers
+            
+            let resizeTimeout;
+            
+            const resizeObserver = new ResizeObserver(entries => {
+                if (!appState.isEditMode) return;
+                
+                // Debounce the resize to avoid excessive saves
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    for (const entry of entries) {
+                        // Get the current zoom to normalize dimensions
+                        const zoom = getRoomZoom();
+                        
+                        // Use offsetWidth/offsetHeight which gives actual pixel dimensions
+                        // Since the parent (#room-layout) has the transform, the children's
+                        // offsetWidth/Height are already in logical (unscaled) coordinates
+                        const newWidth = featureEl.offsetWidth;
+                        const newHeight = featureEl.offsetHeight;
+                        
+                        const feature = appState.roomFeatures[featureId];
+                        if (!feature) return;
+                        
+                        // Get minimum size for this feature type
+                        const minSize = getMinimumSize(feature.type);
+                        
+                        // Clamp to minimum sizes
+                        const clampedWidth = Math.max(minSize.w, newWidth);
+                        const clampedHeight = Math.max(minSize.h, newHeight);
+                        
+                        // Only update if changed
+                        if (feature.w !== clampedWidth || feature.h !== clampedHeight) {
+                            feature.w = clampedWidth;
+                            feature.h = clampedHeight;
+                            
+                            // Apply clamped sizes back to the element
+                            featureEl.style.width = clampedWidth + 'px';
+                            featureEl.style.height = clampedHeight + 'px';
+                            
+                            saveState();
+                        }
+                    }
+                }, 100); // 100ms debounce
+            });
+            
+            resizeObserver.observe(featureEl);
+        }
+        
+        function attachTableResizeObserver(tableEl, tableId) {
+            if (!window.ResizeObserver) return; // Fallback for older browsers
+            
+            let resizeTimeout;
+            
+            const resizeObserver = new ResizeObserver(entries => {
+                if (!appState.isEditMode) return;
+                
+                // Debounce the resize to avoid excessive saves
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    for (const entry of entries) {
+                        // Use offsetWidth/offsetHeight which gives actual pixel dimensions
+                        const newWidth = tableEl.offsetWidth;
+                        const newHeight = tableEl.offsetHeight;
+                        
+                        const table = appState.tables.find(t => t.id === tableId);
+                        if (!table) return;
+                        
+                        // Only update if changed
+                        if (table.w !== newWidth || table.h !== newHeight) {
+                            table.w = newWidth;
+                            table.h = newHeight;
+                            saveState();
+                        }
+                    }
+                }, 150); // 150ms debounce
+            });
+            
+            resizeObserver.observe(tableEl);
+        }
+
+        function handleAddFurniture() {
+            // Generate a unique ID for the new furniture
+            let id = 1;
+            while (appState.roomFeatures[`furniture-${id}`]) {
+                id++;
+            }
+            const newId = `furniture-${id}`;
+            
+            // Add new furniture at a default position
+            appState.roomFeatures[newId] = {
+                id: newId,
+                name: 'Furniture',
+                type: 'generic',
+                x: 300,
+                y: 300,
+                w: 120,
+                h: 80,
+                color: FEATURE_DEFAULT_COLORS.generic
+            };
+            
+            saveState();
+            render();
+        }
+        
+        // --- 6. DATA SHARE & RESET ---
+        
+        function handleShareLink() {
+            // First, force a save to make sure the URL is 100% up-to-date
+            updateURLHash(true);
+            // Now, copy the link
+            prompt("Bookmark or share this unique link:", window.location.href);
+        }
+        
+        function handleResetAll() {
+            if (!confirm('ARE YOU SURE?\n\nThis will erase all your rosters, table positions, and assignments for ALL classes and reset the app to its original state. This cannot be undone.')) {
+                return;
+            }
+            localStorage.removeItem('seatingChartState');
+            appState = getInitialState(); 
+            window.history.replaceState(null, '', ' '); // Clear hash
+            saveState(); // Save the fresh state
+            render();
+            alert("App has been reset to its default state.");
+        }
+        
+        // --- 7. ROSTER MANAGER & SHUFFLE CHECKS ---
         
         function handleManageRoster() {
             renderRosterManagerModal();
             rosterManagerOverlay.classList.add('modal-visible');
         }
         
-        function handleShuffle() {
-            const activeClass = appState.classes.find(c => c.id === appState.activeClassId);
-            if (!activeClass) return;
-            
-            const respectLocked = document.getElementById('respect-locked-check').checked;
-            const avoidLonely = document.getElementById('avoid-lonely-check').checked;
-            
-            const lockedSeats = {};
-            if (respectLocked) {
-                for (let seatId in activeClass.assignments) {
-                    const studentName = activeClass.assignments[seatId];
-                    const student = activeClass.roster.find(s => s.name === studentName);
-                    if (student && student.locked === seatId) {
-                        lockedSeats[seatId] = studentName;
-                    }
-                }
-            }
-            
-            const availableSeats = [];
-            appState.tables.forEach(table => {
-                const seatCount = table.type === 'newton' ? 5 : 4;
-                for (let i = 0; i < seatCount; i++) {
-                    const seatId = `${table.id}-s${i}`;
-                    if (!lockedSeats[seatId]) {
-                        availableSeats.push(seatId);
-                    }
-                }
-            });
-            
-            const studentsToAssign = activeClass.roster.filter(student => {
-                if (respectLocked && student.locked) {
-                    return false;
-                }
-                return true;
-            });
-            
-            if (studentsToAssign.length > availableSeats.length) {
-                alert(`Not enough seats! You have ${studentsToAssign.length} students but only ${availableSeats.length} available seats.`);
-                return;
-            }
-            
-            activeClass.assignments = { ...lockedSeats };
-            
-            const separations = activeClass.separations || [];
-            const genderMap = {};
-            activeClass.roster.forEach(student => {
-                genderMap[student.name] = student.gender || 'U';
-            });
-            
-            let bestAssignment = null;
-            let bestScore = Infinity;
-            const maxAttempts = 100;
-            
-            for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                const shuffled = [...studentsToAssign].sort(() => Math.random() - 0.5);
-                const testAssignments = { ...lockedSeats };
-                
-                shuffled.forEach((student, i) => {
-                    testAssignments[availableSeats[i]] = student.name;
-                });
-                
-                let score = 0;
-                
-                // Penalty for separation violations
-                for (const pair of separations) {
-                    const name1 = pair[0];
-                    const name2 = pair[1];
-                    const table1 = Object.keys(testAssignments).find(k => testAssignments[k] === name1)?.split('-s')[0];
-                    const table2 = Object.keys(testAssignments).find(k => testAssignments[k] === name2)?.split('-s')[0];
-                    if (table1 && table1 === table2) {
-                        score += 100;
-                    }
-                }
-                
-                // Penalty for lonely students
-                if (avoidLonely) {
-                    const tableGroups = {};
-                    for (const seatId in testAssignments) {
-                        const studentName = testAssignments[seatId];
-                        const tableId = seatId.split('-s')[0];
-                        if (!tableGroups[tableId]) tableGroups[tableId] = [];
-                        tableGroups[tableId].push(studentName);
-                    }
-                    
-                    for (const tableId in tableGroups) {
-                        const studentsOnTable = tableGroups[tableId];
-                        if (studentsOnTable.length < 2) continue;
-                        
-                        const counts = { M: 0, F: 0, U: 0 };
-                        studentsOnTable.forEach(name => {
-                            counts[genderMap[name]]++;
-                        });
-                        
-                        if ((counts.M === 1 && counts.F > 0) || (counts.F === 1 && counts.M > 0)) {
-                            score += 10;
-                        }
-                    }
-                }
-                
-                if (score < bestScore) {
-                    bestScore = score;
-                    bestAssignment = testAssignments;
-                }
-                
-                if (score === 0) break;
-            }
-            
-            if (bestAssignment) {
-                activeClass.assignments = bestAssignment;
-            }
-            
-            saveState();
-            render();
-            
-            if (avoidLonely) {
-                checkLonelyStudents(true);
-            }
-            checkSeparations();
-        }
-        
-        function handleClearAssignments() {
-            if (!confirm('Clear all seat assignments for this class?')) return;
-            
-            const activeClass = appState.classes.find(c => c.id === appState.activeClassId);
-            if (!activeClass) return;
-            
-            activeClass.assignments = {};
-            
-            activeClass.roster.forEach(student => {
-                student.locked = null;
-            });
-            
-            saveState();
-            render();
-        }
-        
-        function handleShareLink() {
-            const stateString = JSON.stringify(appState);
-            const encodedData = encodeURIComponent(stateString);
-            const url = `${window.location.origin}${window.location.pathname}#data=${encodedData}`;
-            
-            navigator.clipboard.writeText(url).then(() => {
-                alert('Shareable link copied to clipboard! Anyone with this link can view your seating chart.');
-            }).catch(() => {
-                prompt('Copy this link to share:', url);
-            });
-        }
-        
-        function handleResetAll() {
-            if (!confirm('Reset ALL data (all classes, tables, settings)? This cannot be undone.')) return;
-            
-            localStorage.removeItem('seatingChartState');
-            appState = {
-                classes: JSON.parse(JSON.stringify(DEFAULT_CLASSES)),
-                activeClassId: 'class1',
-                tables: JSON.parse(JSON.stringify(DEFAULT_TABLES)),
-                editMode: false,
-                nextTableId: 6,
-                displayOptions: {
-                    nameFormat: 'full',
-                    textScale: 1.0,
-                    colorByGender: false
-                }
-            };
-            isLoadedFromURL = false;
-            render();
-            alert('All data has been reset.');
-        }
-        
-        function handleSeatClick(seatId) {
-            const activeClass = appState.classes.find(c => c.id === appState.activeClassId);
-            if (!activeClass) return;
-            
-            const currentStudent = activeClass.assignments[seatId];
-            
-            if (currentStudent) {
-                const student = activeClass.roster.find(s => s.name === currentStudent);
-                if (student) {
-                    if (student.locked === seatId) {
-                        student.locked = null;
-                    } else {
-                        student.locked = seatId;
-                    }
-                    saveState();
-                    render();
-                }
-                return;
-            }
-            
-            const assignedNames = Object.values(activeClass.assignments);
-            const unassignedStudents = activeClass.roster.filter(s => !assignedNames.includes(s.name));
-            
-            if (unassignedStudents.length === 0) {
-                alert('All students are already assigned. Clear a seat first or add more students.');
-                return;
-            }
-            
-            const studentName = prompt(
-                `Assign a student to this seat:\n\nAvailable students:\n${unassignedStudents.map(s => s.name).join(', ')}\n\nEnter name:`
-            );
-            
-            if (!studentName) return;
-            
-            const trimmedName = studentName.trim();
-            const student = activeClass.roster.find(s => s.name === trimmedName);
-            
-            if (!student) {
-                alert(`Student "${trimmedName}" not found in roster.`);
-                return;
-            }
-            
-            if (assignedNames.includes(trimmedName)) {
-                alert(`${trimmedName} is already assigned to another seat.`);
-                return;
-            }
-            
-            activeClass.assignments[seatId] = trimmedName;
-            saveState();
-            render();
-        }
-        
-        function handleNameFormatChange() {
-            appState.displayOptions.nameFormat = nameFormatSelect.value;
-            saveState();
-            render();
-        }
-        
-        function handleTextSizeChange() {
-            const scale = textSizeSlider.value / 100;
-            appState.displayOptions.textScale = scale;
-            saveState();
-            renderDisplayOptions();
-            render();
-        }
-        
-        function handleColorByGenderChange() {
-            appState.displayOptions.colorByGender = colorByGenderCheck.checked;
-            saveState();
-            render();
-        }
-        
-        
-        // --- 6. DRAGGABLE TABLES ---
-        
-        function makeTableDraggable(tableEl, tableData) {
-            let isDragging = false;
-            let offsetX = 0;
-            let offsetY = 0;
-            
-            tableEl.addEventListener('mousedown', (e) => {
-                if (e.target.closest('.remove-table-btn')) return;
-                
-                isDragging = true;
-                tableEl.classList.add('dragging');
-                
-                const rect = tableEl.getBoundingClientRect();
-                const canvasRect = canvas.getBoundingClientRect();
-                offsetX = e.clientX - rect.left;
-                offsetY = e.clientY - rect.top;
-                
-                e.preventDefault();
-            });
-            
-            document.addEventListener('mousemove', (e) => {
-                if (!isDragging) return;
-                
-                const canvasRect = canvas.getBoundingClientRect();
-                let newX = e.clientX - canvasRect.left - offsetX;
-                let newY = e.clientY - canvasRect.top - offsetY;
-                
-                newX = Math.max(0, newX);
-                newY = Math.max(0, newY);
-                
-                tableEl.style.left = newX + 'px';
-                tableEl.style.top = newY + 'px';
-            });
-            
-            document.addEventListener('mouseup', () => {
-                if (!isDragging) return;
-                
-                isDragging = false;
-                tableEl.classList.remove('dragging');
-                
-                tableData.x = parseInt(tableEl.style.left);
-                tableData.y = parseInt(tableEl.style.top);
-                
-                saveState();
-            });
-        }
-        
-        
-        // --- 7. ROSTER MANAGER MODAL ---
-        
         function renderRosterManagerModal() {
-            const activeClass = appState.classes.find(c => c.id === appState.activeClassId);
-            if (!activeClass) return;
+            const roster = appState.classes[appState.activeClassId].roster;
+            const separations = appState.classes[appState.activeClassId].separations || [];
             
-            const separations = activeClass.separations || [];
-            
-            // 1. Populate Gender Selection List
+            // 1. Populate Gender List
             rosterManagerList.innerHTML = '';
-            activeClass.roster.forEach(student => {
+            if (roster.length === 0) {
+                rosterManagerList.innerHTML = '<li>Please add students to your roster first.</li>';
+            }
+            roster.forEach(student => {
                 const li = document.createElement('li');
+                const nameLabel = document.createElement('span');
+                nameLabel.textContent = student.name;
                 
-                const nameSpan = document.createElement('span');
-                nameSpan.textContent = student.name;
+                const select = document.createElement('select');
+                select.dataset.name = student.name;
+                select.innerHTML = `<option value="U">Unspecified</option><option value="M">M</option><option value="F">F</option>`;
+                select.value = student.gender || 'U';
                 
-                const genderSelect = document.createElement('select');
-                genderSelect.dataset.name = student.name;
-                
-                const optU = document.createElement('option');
-                optU.value = 'U';
-                optU.textContent = 'Unknown';
-                genderSelect.appendChild(optU);
-                
-                const optM = document.createElement('option');
-                optM.value = 'M';
-                optM.textContent = 'Male';
-                genderSelect.appendChild(optM);
-                
-                const optF = document.createElement('option');
-                optF.value = 'F';
-                optF.textContent = 'Female';
-                genderSelect.appendChild(optF);
-                
-                genderSelect.value = student.gender || 'U';
-                
-                li.appendChild(nameSpan);
-                li.appendChild(genderSelect);
+                li.appendChild(nameLabel);
+                li.appendChild(select);
                 rosterManagerList.appendChild(li);
             });
             
             // 2. Populate Separation Dropdowns
-            sepStudent1.innerHTML = '<option value="">Select student...</option>';
-            sepStudent2.innerHTML = '<option value="">Select student...</option>';
-            activeClass.roster.forEach(student => {
-                const opt1 = document.createElement('option');
-                opt1.value = student.name;
-                opt1.textContent = student.name;
-                sepStudent1.appendChild(opt1);
-                
-                const opt2 = document.createElement('option');
-                opt2.value = student.name;
-                opt2.textContent = student.name;
-                sepStudent2.appendChild(opt2);
-            });
+            const studentOptions = roster.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+            sepStudent1.innerHTML = studentOptions;
+            sepStudent2.innerHTML = studentOptions;
             
             // 3. Populate Current Separation List
             separationList.innerHTML = '';
@@ -1547,7 +2019,7 @@ Dana"></textarea>
         }
         
         function handleSaveRosterManager() {
-            const activeClass = appState.classes.find(c => c.id === appState.activeClassId);
+            const activeClass = appState.classes[appState.activeClassId];
             
             // 1. Save Genders
             const selects = rosterManagerList.querySelectorAll('select');
@@ -1560,7 +2032,7 @@ Dana"></textarea>
                 }
             });
             
-            saveState();
+            saveState(); // Genders and Separations are saved
             closeRosterModal();
             alert('Roster changes saved!');
         }
@@ -1574,7 +2046,7 @@ Dana"></textarea>
                 return;
             }
             
-            const activeClass = appState.classes.find(c => c.id === appState.activeClassId);
+            const activeClass = appState.classes[appState.activeClassId];
             const separations = activeClass.separations;
             
             const exists = separations.some(pair => 
@@ -1587,21 +2059,23 @@ Dana"></textarea>
             }
             
             separations.push([name1, name2]);
-            renderRosterManagerModal();
+            // Note: No saveState() here. It's saved on "Save Changes"
+            renderRosterManagerModal(); 
         }
         
         function handleRemoveSeparation(e) {
-            if (!e.target.matches('button.danger')) return;
+            if (!e.target.matches('button.danger')) return; 
             
             const name1 = e.target.dataset.name1;
             const name2 = e.target.dataset.name2;
-            const activeClass = appState.classes.find(c => c.id === appState.activeClassId);
+            const activeClass = appState.classes[appState.activeClassId];
             
             activeClass.separations = activeClass.separations.filter(pair => 
                 !((pair[0] === name1 && pair[1] === name2) || (pair[0] === name2 && pair[1] === name1))
             );
             
-            renderRosterManagerModal();
+            // Note: No saveState() here. It's saved on "Save Changes"
+            renderRosterManagerModal(); 
         }
         
         function closeRosterModal() {
@@ -1614,7 +2088,7 @@ Dana"></textarea>
                 return;
             }
             
-            const activeClass = appState.classes.find(c => c.id === appState.activeClassId);
+            const activeClass = appState.classes[appState.activeClassId];
             const assignments = activeClass.assignments;
             
             const genderMap = {};
@@ -1625,7 +2099,7 @@ Dana"></textarea>
             const tableGroups = {};
             for (const seatId in assignments) {
                 const studentName = assignments[seatId];
-                if (!studentName) continue;
+                if (!studentName) continue; // Skip empty seats
                 const tableId = seatId.split('-s')[0];
                 if (!tableGroups[tableId]) tableGroups[tableId] = [];
                 tableGroups[tableId].push(studentName);
@@ -1634,17 +2108,17 @@ Dana"></textarea>
             const lonelyStudents = [];
             for (const tableId in tableGroups) {
                 const studentsOnTable = tableGroups[tableId];
-                if (studentsOnTable.length < 2) continue;
+                if (studentsOnTable.length < 2) continue; 
                 
                 const counts = { M: 0, F: 0, U: 0 };
                 studentsOnTable.forEach(name => {
                     counts[genderMap[name]]++;
                 });
                 
-                if (counts.M === 1 && counts.F > 0) {
+                if (counts.M === 1 && counts.F > 0) { 
                     const lonelyName = studentsOnTable.find(name => genderMap[name] === 'M');
                     lonelyStudents.push({ name: lonelyName, tableId: tableId });
-                } else if (counts.F === 1 && counts.M > 0) {
+                } else if (counts.F === 1 && counts.M > 0) { 
                     const lonelyName = studentsOnTable.find(name => genderMap[name] === 'F');
                     lonelyStudents.push({ name: lonelyName, tableId: tableId });
                 }
@@ -1667,16 +2141,16 @@ Dana"></textarea>
         }
         
         function checkSeparations() {
-            const activeClass = appState.classes.find(c => c.id === appState.activeClassId);
+            const activeClass = appState.classes[appState.activeClassId];
             const separations = activeClass.separations || [];
-            if (separations.length === 0) return;
+            if (separations.length === 0) return; 
             
             const assignments = activeClass.assignments;
             
             const studentLocations = {};
             for (const seatId in assignments) {
                 const studentName = assignments[seatId];
-                if (!studentName) continue;
+                if (!studentName) continue; // Skip empty seats
                 const tableId = seatId.split('-s')[0];
                 studentLocations[studentName] = tableId;
             }
@@ -1708,16 +2182,17 @@ Dana"></textarea>
 
         // --- 8. INITIALIZATION ---
         
+        // This is now synchronous, no 'main' async function
         classSelector.addEventListener('change', handleClassChange);
-        editLayoutBtn.addEventListener('click', handleToggleEditMode);
+        editLayoutBtn.addEventListener('click', handleToggleEditMode); 
         addFurnitureBtn.addEventListener('click', handleAddFurniture);
         fitToScreenBtn.addEventListener('click', handleFitToScreen);
         saveRosterBtn.addEventListener('click', handleSaveRoster);
-        manageRosterBtn.addEventListener('click', handleManageRoster);
+        manageRosterBtn.addEventListener('click', handleManageRoster); 
         shuffleBtn.addEventListener('click', handleShuffle);
         clearAssignmentsBtn.addEventListener('click', handleClearAssignments);
-        shareLinkBtn.addEventListener('click', handleShareLink);
-        resetAllBtn.addEventListener('click', handleResetAll);
+        shareLinkBtn.addEventListener('click', handleShareLink); // Updated
+        resetAllBtn.addEventListener('click', handleResetAll); 
         checkLonelyBtn.addEventListener('click', () => checkLonelyStudents(false));
         
         // Display Options Listeners
@@ -1729,14 +2204,10 @@ Dana"></textarea>
         closeRosterModalBtn.addEventListener('click', closeRosterModal);
         saveRosterManagerBtn.addEventListener('click', handleSaveRosterManager);
         addSeparationBtn.addEventListener('click', handleAddSeparation);
-        separationList.addEventListener('click', handleRemoveSeparation);
+        separationList.addEventListener('click', handleRemoveSeparation); 
         rosterManagerOverlay.addEventListener('click', (e) => {
             if (e.target === rosterManagerOverlay) closeRosterModal();
         });
-        
-        // Shared Link Banner Listeners
-        saveSharedDataBtn.addEventListener('click', handleSaveSharedData);
-        dismissBannerBtn.addEventListener('click', handleDismissBanner);
         
         // First load and render
         loadState();
