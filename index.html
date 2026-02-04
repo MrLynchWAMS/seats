@@ -625,6 +625,107 @@ href='data:image/svg+xml;utf8,
         }
         #separation-list { margin-top: 0.5rem; }
         
+        /* --- 9. PRINT MODAL STYLES --- */
+        .print-option-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .print-option-row label {
+            cursor: pointer;
+        }
+        
+        /* --- 10. PRINT HEADER (for printed output) --- */
+        #print-header {
+            display: none;
+            text-align: center;
+            padding: 1rem;
+            font-family: var(--font-family);
+        }
+        #print-header h1 {
+            margin: 0;
+            font-size: 2rem;
+            color: #333;
+        }
+        
+        /* --- 11. PRINT STYLES --- */
+        @media print {
+            /* Hide everything except the room layout */
+            body {
+                background: white !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
+            
+            header,
+            .panel-left,
+            .modal-overlay,
+            #print-modal-overlay {
+                display: none !important;
+            }
+            
+            .main-container {
+                display: block !important;
+                overflow: visible !important;
+            }
+            
+            .room-container {
+                overflow: visible !important;
+                background: white !important;
+                background-image: none !important;
+                padding: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+            }
+            
+            #room-layout {
+                transform: none !important;
+                width: auto !important;
+                height: auto !important;
+                min-width: 0 !important;
+                min-height: 0 !important;
+            }
+            
+            /* Show print header if enabled */
+            #print-header.show-print-header {
+                display: block !important;
+            }
+            
+            /* Hide empty seat text but keep the seat visible */
+            .seat.empty {
+                color: transparent !important;
+            }
+            
+            /* Hide color picker and close buttons */
+            .feature-color-picker,
+            .room-feature-close {
+                display: none !important;
+            }
+            
+            /* Reset any edit mode styles */
+            .room-feature {
+                border: 1px dashed #aaa !important;
+                resize: none !important;
+            }
+            
+            /* Ensure tables are visible */
+            .table {
+                box-shadow: none !important;
+                page-break-inside: avoid;
+            }
+            
+            .table[data-used="false"] {
+                display: none !important;
+            }
+            
+            /* Page setup for landscape */
+            @page {
+                size: landscape;
+                margin: 0.5in;
+            }
+        }
+        
     </style>
 </head>
 <body>
@@ -641,6 +742,7 @@ href='data:image/svg+xml;utf8,
             <button id="edit-layout-btn">Edit Layout</button>
             <button id="add-furniture-btn" style="display: none;">Add Furniture</button>
             <button id="fit-to-screen-btn">Fit to Screen</button>
+            <button id="print-btn">🖨️ Print</button>
             <button id="shuffle-btn">Shuffle Unlocked</button>
             <button id="clear-assignments-btn" class="danger">Clear All Seats</button>
         </div>
@@ -708,6 +810,10 @@ Student C..."></textarea>
         </aside>
 
         <main class="room-container">
+            <!-- Print Header (hidden by default, shown when printing with header option) -->
+            <div id="print-header">
+                <h1 id="print-header-title"></h1>
+            </div>
             <div id="room-layout">
                 <div id="room-features">
                     <!-- JS will populate furniture items -->
@@ -740,6 +846,24 @@ Student C..."></textarea>
             <div class="modal-buttons">
                 <button id="close-roster-modal-btn">Cancel</button>
                 <button id="save-roster-manager-btn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- PRINT MODAL -->
+    <div id="print-modal-overlay" class="modal-overlay">
+        <div class="modal-content" style="max-width: 400px;">
+            <h3>Print Seating Chart</h3>
+            <p>Configure your print options below.</p>
+            
+            <div class="print-option-row">
+                <input type="checkbox" id="print-include-header" checked />
+                <label for="print-include-header">Include class name header</label>
+            </div>
+            
+            <div class="modal-buttons">
+                <button id="cancel-print-btn">Cancel</button>
+                <button id="confirm-print-btn">Print</button>
             </div>
         </div>
     </div>
@@ -1012,6 +1136,7 @@ Student C..."></textarea>
         const editLayoutBtn = document.getElementById('edit-layout-btn'); 
         const addFurnitureBtn = document.getElementById('add-furniture-btn');
         const fitToScreenBtn = document.getElementById('fit-to-screen-btn');
+        const printBtn = document.getElementById('print-btn');
         const rosterInput = document.getElementById('roster-input');
         const saveRosterBtn = document.getElementById('save-roster-btn');
         const manageRosterBtn = document.getElementById('manage-roster-btn'); 
@@ -1041,6 +1166,14 @@ Student C..."></textarea>
         const sepStudent2 = document.getElementById('sep-student-2');
         const addSeparationBtn = document.getElementById('add-separation-btn');
         const separationList = document.getElementById('separation-list');
+        
+        // Print Modal
+        const printModalOverlay = document.getElementById('print-modal-overlay');
+        const printIncludeHeader = document.getElementById('print-include-header');
+        const cancelPrintBtn = document.getElementById('cancel-print-btn');
+        const confirmPrintBtn = document.getElementById('confirm-print-btn');
+        const printHeader = document.getElementById('print-header');
+        const printHeaderTitle = document.getElementById('print-header-title');
         
         
         // --- 2B. HELPER FUNCTIONS ---
@@ -1409,857 +1542,4 @@ Student C..."></textarea>
             const roomLayout = document.getElementById('room-layout');
             
             // Get current transform
-            const currentTransform = window.getComputedStyle(roomLayout).transform;
-            const isScaled = currentTransform && currentTransform !== 'none';
-            
-            if (isScaled) {
-                // Reset to normal view
-                roomLayout.style.transform = 'none';
-                roomLayout.style.transformOrigin = 'top left';
-            } else {
-                // Calculate scale to fit
-                const containerWidth = roomContainer.clientWidth;
-                const containerHeight = roomContainer.clientHeight;
-                const layoutWidth = roomLayout.offsetWidth;
-                const layoutHeight = roomLayout.offsetHeight;
-                
-                // Calculate scale factors for width and height
-                const scaleX = containerWidth / layoutWidth;
-                const scaleY = containerHeight / layoutHeight;
-                
-                // Use the smaller scale to ensure everything fits
-                const scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
-                
-                // Apply transform
-                roomLayout.style.transform = `scale(${scale})`;
-                roomLayout.style.transformOrigin = 'top left';
-                
-                // Scroll to top-left
-                roomContainer.scrollTo(0, 0);
-            }
-        }
-
-        // --- 4. EVENT HANDLERS ---
-        
-        function handleClassChange(e) {
-            appState.activeClassId = e.target.value;
-            saveState(); 
-            render();
-        }
-        
-        function handleToggleEditMode() {
-            appState.isEditMode = !appState.isEditMode;
-            saveState();
-            render();
-        }
-        
-        function handleTableNameChange(e) {
-            const tableId = e.target.dataset.tableId;
-            const newName = e.target.value.trim();
-            
-            if (newName) {
-                const table = appState.tables.find(t => t.id === tableId);
-                if (table) {
-                    table.name = newName;
-                    saveState();
-                    renderTableToggles(); 
-                }
-            } else {
-                e.target.value = appState.tables.find(t => t.id === tableId).name;
-            }
-        }
-
-        function handleSaveRoster() {
-            const activeClass = appState.classes[appState.activeClassId];
-            const newNames = rosterInput.value
-                .split('\n')
-                .map(name => name.trim())
-                .filter(name => name.length > 0);
-            
-            const newNameSet = new Set(newNames);
-            const oldRoster = activeClass.roster || [];
-            const newRoster = [];
-            
-            oldRoster.forEach(student => {
-                if (newNameSet.has(student.name)) {
-                    newRoster.push(student);
-                }
-            });
-            
-            const existingNameSet = new Set(newRoster.map(s => s.name));
-            newNames.forEach(name => {
-                if (!existingNameSet.has(name)) {
-                    newRoster.push({ name: name, gender: 'U' }); 
-                }
-            });
-            
-            activeClass.roster = newRoster;
-            
-            const rosterNameSet = new Set(activeClass.roster.map(s => s.name));
-            for (const seatId in activeClass.assignments) {
-                if (!rosterNameSet.has(activeClass.assignments[seatId])) {
-                    delete activeClass.assignments[seatId];
-                }
-            }
-            activeClass.locked = activeClass.locked.filter(name => rosterNameSet.has(name));
-            
-            alert(`Roster for ${activeClass.name} saved!`);
-            saveState();
-            render();
-        }
-        
-        function handleTableToggle(e) {
-            const tableId = e.target.dataset.tableId;
-            const isChecked = e.target.checked;
-            const activeClass = appState.classes[appState.activeClassId];
-            
-            activeClass.tableSettings[tableId].used = isChecked;
-            
-            if (!isChecked) {
-                for (const seatId in activeClass.assignments) {
-                    if (seatId.startsWith(tableId)) {
-                        delete activeClass.assignments[seatId];
-                    }
-                }
-            }
-            saveState();
-            render(); 
-        }
-        
-        function handleSeatCountChange(e) {
-            const tableId = e.target.dataset.tableId;
-            const newCount = parseInt(e.target.value, 10);
-            const activeClass = appState.classes[appState.activeClassId];
-            
-            activeClass.tableSettings[tableId].maxSeats = newCount;
-            
-            for (const seatId in activeClass.assignments) {
-                if (seatId.startsWith(tableId)) {
-                    const seatNum = parseInt(seatId.split('-s')[1], 10);
-                    if (seatNum > newCount) {
-                        delete activeClass.assignments[seatId];
-                    }
-                }
-            }
-            saveState();
-            render();
-        }
-        
-        function handleNameFormatChange(e) {
-            appState.displayOptions.nameFormat = e.target.value;
-            saveState();
-            render();
-        }
-        
-        function handleTextSizeChange(e) {
-            appState.displayOptions.textScale = parseInt(e.target.value, 10);
-            saveState();
-            render();
-        }
-        
-        function handleColorByGenderChange(e) {
-            appState.displayOptions.colorByGender = e.target.checked;
-            saveState();
-            render();
-        }
-        
-        // --- 5. CORE LOGIC: SHUFFLE, LOCK, DRAG/DROP ---
-
-        function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-        }
-
-        function handleShuffle() {
-            if (appState.isEditMode) return; 
-            
-            const activeClass = appState.classes[appState.activeClassId];
-            const assignments = activeClass.assignments;
-            const lockedStudents = activeClass.locked || [];
-            
-            const studentsToShuffle = activeClass.roster.filter(student => !lockedStudents.includes(student.name));
-            shuffleArray(studentsToShuffle);
-
-            const seatFillQueue = [];
-            const activeTables = appState.tables.filter(t => activeClass.tableSettings[t.id].used);
-            
-            let maxDepth = 0;
-            activeTables.forEach(t => {
-                const tableMax = activeClass.tableSettings[t.id].maxSeats;
-                if (tableMax > maxDepth) maxDepth = tableMax;
-            });
-
-            for (let i = 1; i <= maxDepth; i++) {
-                shuffleArray(activeTables); 
-                for (const table of activeTables) {
-                    const classSettings = activeClass.tableSettings[table.id];
-                    
-                    if (i <= classSettings.maxSeats) {
-                        const seatId = `${table.id}-s${i}`;
-                        const studentInSeat = assignments[seatId];
-                        
-                        if (!studentInSeat || !lockedStudents.includes(studentInSeat)) {
-                            seatFillQueue.push(seatId);
-                        }
-                    }
-                }
-            }
-
-            for (const seatId in assignments) {
-                const studentName = assignments[seatId];
-                if (studentsToShuffle.some(s => s.name === studentName)) {
-                    delete assignments[seatId];
-                }
-            }
-            
-            const numAssignments = Math.min(studentsToShuffle.length, seatFillQueue.length);
-            for (let i = 0; i < numAssignments; i++) {
-                assignments[seatFillQueue[i]] = studentsToShuffle[i].name; 
-            }
-            
-            saveState();
-            checkSeparations(); 
-            checkLonelyStudents(true); 
-            render();
-        }
-
-        function handleClearAssignments() {
-            if (appState.isEditMode) return;
-            if (!confirm('Are you sure you want to clear all assignments for this class? (Locked students will be unlocked and unassigned).')) {
-                return;
-            }
-            const activeClass = appState.classes[appState.activeClassId];
-            activeClass.assignments = {};
-            activeClass.locked = [];
-            
-            saveState();
-            render();
-        }
-
-        function addSeatListeners(seatEl) {
-            const studentName = seatEl.dataset.studentName;
-            
-            if (studentName) {
-                seatEl.addEventListener('click', () => {
-                    if (appState.isEditMode) return; 
-                    
-                    const activeClass = appState.classes[appState.activeClassId];
-                    const lockedStudents = activeClass.locked;
-                    
-                    if (lockedStudents.includes(studentName)) {
-                        activeClass.locked = lockedStudents.filter(name => name !== studentName);
-                    } else {
-                        lockedStudents.push(studentName);
-                    }
-                    saveState();
-                    render(); 
-                });
-            }
-
-            seatEl.addEventListener('dragstart', (e) => {
-                if (appState.isEditMode) { e.preventDefault(); return; } 
-                
-                if (studentName) {
-                    draggedStudent = studentName;
-                    e.dataTransfer.setData('text/plain', studentName);
-                    e.dataTransfer.effectAllowed = 'move';
-                    setTimeout(() => e.target.classList.add('dragging'), 0);
-                } else {
-                    e.preventDefault(); 
-                }
-            });
-
-            seatEl.addEventListener('dragend', (e) => {
-                if (appState.isEditMode) return;
-                draggedStudent = null;
-                e.target.classList.remove('dragging');
-            });
-            
-            seatEl.addEventListener('dragover', (e) => {
-                if (appState.isEditMode) return;
-                e.preventDefault(); 
-                e.dataTransfer.dropEffect = 'move';
-            });
-            
-            seatEl.addEventListener('drop', (e) => {
-                if (appState.isEditMode || !draggedStudent) { e.preventDefault(); return; }
-                e.preventDefault();
-                
-                const sourceStudent = draggedStudent;
-                const targetSeatId = e.currentTarget.dataset.seatId;
-                const targetStudent = e.currentTarget.dataset.studentName; 
-                
-                const activeClass = appState.classes[appState.activeClassId];
-                const assignments = activeClass.assignments;
-                
-                let sourceSeatId = null;
-                for (const seatId in assignments) {
-                    if (assignments[seatId] === sourceStudent) {
-                        sourceSeatId = seatId;
-                        break;
-                    }
-                }
-                
-                if (sourceSeatId === targetSeatId) return; 
-                assignments[targetSeatId] = sourceStudent;
-                if (targetStudent) {
-                    assignments[sourceSeatId] = targetStudent; // Swap
-                } else {
-                    delete assignments[sourceSeatId]; // Move
-                }
-                
-                draggedStudent = null;
-                saveState();
-                render();
-            });
-        }
-        
-        function addTableDragListeners(tableEl, tableHeaderEl, table) {
-            let offsetX, offsetY, isDragging = false;
-            const room = document.querySelector('.room-container');
-
-            function onMouseDown(e) {
-                if (!appState.isEditMode || e.button !== 0) return; 
-                
-                isDragging = true;
-                tableEl.classList.add('dragging-table');
-                
-                const rect = tableEl.getBoundingClientRect();
-                offsetX = e.clientX - rect.left;
-                offsetY = e.clientY - rect.top;
-
-                e.preventDefault();
-                
-                document.addEventListener('mousemove', onMouseMove);
-                document.addEventListener('mouseup', onMouseUp);
-            }
-
-            function onMouseMove(e) {
-                if (!isDragging) return;
-                
-                const roomRect = room.getBoundingClientRect();
-                let newX = e.clientX - roomRect.left - offsetX;
-                let newY = e.clientY - roomRect.top - offsetY;
-                
-                newX = Math.max(0, Math.min(newX, roomRect.width - tableEl.offsetWidth));
-                newY = Math.max(0, Math.min(newY, roomRect.height - tableEl.offsetHeight));
-                
-                table.x = newX;
-                table.y = newY;
-
-                tableEl.style.left = newX + 'px';
-                tableEl.style.top = newY + 'px';
-            }
-
-            function onMouseUp() {
-                if (!isDragging) return;
-                isDragging = false;
-                tableEl.classList.remove('dragging-table');
-                
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
-                
-                saveState(); 
-            }
-
-            tableHeaderEl.addEventListener('mousedown', onMouseDown);
-        }
-
-        function makeFeatureDraggable(featureEl, featureId) {
-            let startX, startY, startFeatureX, startFeatureY, isDragging = false;
-            const room = document.querySelector('.room-container');
-
-            function onMouseDown(e) {
-                if (!appState.isEditMode || e.button !== 0) return;
-                
-                // Don't drag if clicking on close button or title
-                if (e.target.classList.contains('room-feature-close') || 
-                    e.target.classList.contains('room-feature-title')) {
-                    return;
-                }
-                
-                isDragging = true;
-                featureEl.style.zIndex = 1001; 
-                
-                // Store starting mouse position and feature position
-                const feature = appState.roomFeatures[featureId];
-                startX = e.clientX;
-                startY = e.clientY;
-                startFeatureX = feature.x;
-                startFeatureY = feature.y;
-
-                e.preventDefault();
-                
-                document.addEventListener('mousemove', onMouseMove);
-                document.addEventListener('mouseup', onMouseUp);
-            }
-
-            function onMouseMove(e) {
-                if (!isDragging) return;
-                
-                // Get current zoom scale
-                const zoom = getRoomZoom();
-                
-                // Calculate delta in screen pixels, then normalize by zoom
-                const dx = (e.clientX - startX) / zoom;
-                const dy = (e.clientY - startY) / zoom;
-                
-                // Apply delta to starting position
-                let newX = startFeatureX + dx;
-                let newY = startFeatureY + dy;
-                
-                // Clamp to non-negative values
-                newX = Math.max(0, newX);
-                newY = Math.max(0, newY);
-                
-                // Update state and DOM with rounded values
-                const roundedX = Math.round(newX);
-                const roundedY = Math.round(newY);
-                appState.roomFeatures[featureId].x = roundedX;
-                appState.roomFeatures[featureId].y = roundedY;
-
-                featureEl.style.left = roundedX + 'px';
-                featureEl.style.top = roundedY + 'px';
-            }
-
-            function onMouseUp() {
-                if (!isDragging) return;
-                isDragging = false;
-                featureEl.style.zIndex = ''; 
-                
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
-                
-                saveState(); 
-            }
-
-            featureEl.addEventListener('mousedown', onMouseDown);
-        }
-        
-        function attachFeatureResizeObserver(featureEl, featureId) {
-            if (!window.ResizeObserver) return; // Fallback for older browsers
-            
-            let resizeTimeout;
-            
-            const resizeObserver = new ResizeObserver(entries => {
-                if (!appState.isEditMode) return;
-                
-                // Debounce the resize to avoid excessive saves
-                clearTimeout(resizeTimeout);
-                resizeTimeout = setTimeout(() => {
-                    for (const entry of entries) {
-                        // Get the current zoom to normalize dimensions
-                        const zoom = getRoomZoom();
-                        
-                        // Use offsetWidth/offsetHeight which gives actual pixel dimensions
-                        // Since the parent (#room-layout) has the transform, the children's
-                        // offsetWidth/Height are already in logical (unscaled) coordinates
-                        const newWidth = featureEl.offsetWidth;
-                        const newHeight = featureEl.offsetHeight;
-                        
-                        const feature = appState.roomFeatures[featureId];
-                        if (!feature) return;
-                        
-                        // Get minimum size for this feature type
-                        const minSize = getMinimumSize(feature.type);
-                        
-                        // Clamp to minimum sizes
-                        const clampedWidth = Math.max(minSize.w, newWidth);
-                        const clampedHeight = Math.max(minSize.h, newHeight);
-                        
-                        // Only update if changed
-                        if (feature.w !== clampedWidth || feature.h !== clampedHeight) {
-                            feature.w = clampedWidth;
-                            feature.h = clampedHeight;
-                            
-                            // Apply clamped sizes back to the element
-                            featureEl.style.width = clampedWidth + 'px';
-                            featureEl.style.height = clampedHeight + 'px';
-                            
-                            saveState();
-                        }
-                    }
-                }, 100); // 100ms debounce
-            });
-            
-            resizeObserver.observe(featureEl);
-        }
-        
-        function attachTableResizeObserver(tableEl, tableId) {
-            if (!window.ResizeObserver) return; // Fallback for older browsers
-            
-            let resizeTimeout;
-            
-            const resizeObserver = new ResizeObserver(entries => {
-                if (!appState.isEditMode) return;
-                
-                // Debounce the resize to avoid excessive saves
-                clearTimeout(resizeTimeout);
-                resizeTimeout = setTimeout(() => {
-                    for (const entry of entries) {
-                        // Use offsetWidth/offsetHeight which gives actual pixel dimensions
-                        const newWidth = tableEl.offsetWidth;
-                        const newHeight = tableEl.offsetHeight;
-                        
-                        const table = appState.tables.find(t => t.id === tableId);
-                        if (!table) return;
-                        
-                        // Only update if changed
-                        if (table.w !== newWidth || table.h !== newHeight) {
-                            table.w = newWidth;
-                            table.h = newHeight;
-                            saveState();
-                        }
-                    }
-                }, 150); // 150ms debounce
-            });
-            
-            resizeObserver.observe(tableEl);
-        }
-
-        function handleAddFurniture() {
-            // Generate a unique ID for the new furniture
-            let id = 1;
-            while (appState.roomFeatures[`furniture-${id}`]) {
-                id++;
-            }
-            const newId = `furniture-${id}`;
-            
-            // Add new furniture at a default position
-            appState.roomFeatures[newId] = {
-                id: newId,
-                name: 'Furniture',
-                type: 'generic',
-                x: 300,
-                y: 300,
-                w: 120,
-                h: 80,
-                color: FEATURE_DEFAULT_COLORS.generic
-            };
-            
-            saveState();
-            render();
-        }
-        
-        // --- 6. DATA SHARE & RESET ---
-        
-        function handleShareLink() {
-            // Create a downloadable JSON file with the current state
-            const stateString = JSON.stringify(appState, null, 2);
-            const blob = new Blob([stateString], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `seating-chart-${appState.activeClassId}-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            alert('Seating chart downloaded! Share this file with others.\n\nTo load: Click "Reset All" button, then drag the JSON file into the browser window.');
-        }
-        
-        function handleImportData(jsonString) {
-            try {
-                const importedState = JSON.parse(jsonString);
-                appState = importedState;
-                saveState();
-                render();
-                alert('Seating chart imported successfully!');
-            } catch (e) {
-                console.error('Failed to import data:', e);
-                alert('Failed to import seating chart. The file may be corrupted.');
-            }
-        }
-        
-        function handleResetAll() {
-            if (!confirm('ARE YOU SURE?\n\nThis will erase all your rosters, table positions, and assignments for ALL classes and reset the app to its original state. This cannot be undone.')) {
-                return;
-            }
-            localStorage.removeItem('seatingChartState');
-            appState = getInitialState(); 
-            window.history.replaceState(null, '', ' '); // Clear hash
-            saveState(); // Save the fresh state
-            render();
-            alert("App has been reset to its default state.");
-        }
-        
-        // --- 7. ROSTER MANAGER & SHUFFLE CHECKS ---
-        
-        function handleManageRoster() {
-            renderRosterManagerModal();
-            rosterManagerOverlay.classList.add('modal-visible');
-        }
-        
-        function renderRosterManagerModal() {
-            const roster = appState.classes[appState.activeClassId].roster;
-            const separations = appState.classes[appState.activeClassId].separations || [];
-            
-            // 1. Populate Gender List
-            rosterManagerList.innerHTML = '';
-            if (roster.length === 0) {
-                rosterManagerList.innerHTML = '<li>Please add students to your roster first.</li>';
-            }
-            roster.forEach(student => {
-                const li = document.createElement('li');
-                const nameLabel = document.createElement('span');
-                nameLabel.textContent = student.name;
-                
-                const select = document.createElement('select');
-                select.dataset.name = student.name;
-                select.innerHTML = `<option value="U">Unspecified</option><option value="M">M</option><option value="F">F</option>`;
-                select.value = student.gender || 'U';
-                
-                li.appendChild(nameLabel);
-                li.appendChild(select);
-                rosterManagerList.appendChild(li);
-            });
-            
-            // 2. Populate Separation Dropdowns
-            const studentOptions = roster.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
-            sepStudent1.innerHTML = studentOptions;
-            sepStudent2.innerHTML = studentOptions;
-            
-            // 3. Populate Current Separation List
-            separationList.innerHTML = '';
-            if (separations.length === 0) {
-                separationList.innerHTML = '<li>No separations defined.</li>';
-            }
-            separations.forEach(pair => {
-                const li = document.createElement('li');
-                li.textContent = `${pair[0]} & ${pair[1]}`;
-                const removeBtn = document.createElement('button');
-                removeBtn.textContent = 'Remove';
-                removeBtn.className = 'danger';
-                removeBtn.dataset.name1 = pair[0];
-                removeBtn.dataset.name2 = pair[1];
-                li.appendChild(removeBtn);
-                separationList.appendChild(li);
-            });
-        }
-        
-        function handleSaveRosterManager() {
-            const activeClass = appState.classes[appState.activeClassId];
-            
-            // 1. Save Genders
-            const selects = rosterManagerList.querySelectorAll('select');
-            selects.forEach(select => {
-                const name = select.dataset.name;
-                const gender = select.value;
-                const student = activeClass.roster.find(s => s.name === name);
-                if (student) {
-                    student.gender = gender;
-                }
-            });
-            
-            saveState(); // Genders and Separations are saved
-            closeRosterModal();
-            alert('Roster changes saved!');
-        }
-        
-        function handleAddSeparation() {
-            const name1 = sepStudent1.value;
-            const name2 = sepStudent2.value;
-            
-            if (!name1 || !name2 || name1 === name2) {
-                alert("Please select two different students.");
-                return;
-            }
-            
-            const activeClass = appState.classes[appState.activeClassId];
-            const separations = activeClass.separations;
-            
-            const exists = separations.some(pair => 
-                (pair[0] === name1 && pair[1] === name2) || (pair[0] === name2 && pair[1] === name1)
-            );
-            
-            if (exists) {
-                alert("This separation rule already exists.");
-                return;
-            }
-            
-            separations.push([name1, name2]);
-            // Note: No saveState() here. It's saved on "Save Changes"
-            renderRosterManagerModal(); 
-        }
-        
-        function handleRemoveSeparation(e) {
-            if (!e.target.matches('button.danger')) return; 
-            
-            const name1 = e.target.dataset.name1;
-            const name2 = e.target.dataset.name2;
-            const activeClass = appState.classes[appState.activeClassId];
-            
-            activeClass.separations = activeClass.separations.filter(pair => 
-                !((pair[0] === name1 && pair[1] === name2) || (pair[0] === name2 && pair[1] === name1))
-            );
-            
-            // Note: No saveState() here. It's saved on "Save Changes"
-            renderRosterManagerModal(); 
-        }
-        
-        function closeRosterModal() {
-            rosterManagerOverlay.classList.remove('modal-visible');
-        }
-        
-        function checkLonelyStudents(isAfterShuffle = false) {
-            if (!document.getElementById('avoid-lonely-check').checked && !isAfterShuffle) {
-                alert("Please check the \"Avoid 'lonely' students\" box to use this feature.");
-                return;
-            }
-            
-            const activeClass = appState.classes[appState.activeClassId];
-            const assignments = activeClass.assignments;
-            
-            const genderMap = {};
-            activeClass.roster.forEach(student => {
-                genderMap[student.name] = student.gender || 'U';
-            });
-            
-            const tableGroups = {};
-            for (const seatId in assignments) {
-                const studentName = assignments[seatId];
-                if (!studentName) continue; // Skip empty seats
-                const tableId = seatId.split('-s')[0];
-                if (!tableGroups[tableId]) tableGroups[tableId] = [];
-                tableGroups[tableId].push(studentName);
-            }
-            
-            const lonelyStudents = [];
-            for (const tableId in tableGroups) {
-                const studentsOnTable = tableGroups[tableId];
-                if (studentsOnTable.length < 2) continue; 
-                
-                const counts = { M: 0, F: 0, U: 0 };
-                studentsOnTable.forEach(name => {
-                    counts[genderMap[name]]++;
-                });
-                
-                if (counts.M === 1 && counts.F > 0) { 
-                    const lonelyName = studentsOnTable.find(name => genderMap[name] === 'M');
-                    lonelyStudents.push({ name: lonelyName, tableId: tableId });
-                } else if (counts.F === 1 && counts.M > 0) { 
-                    const lonelyName = studentsOnTable.find(name => genderMap[name] === 'F');
-                    lonelyStudents.push({ name: lonelyName, tableId: tableId });
-                }
-            }
-            
-            if (lonelyStudents.length > 0) {
-                const tableNames = appState.tables.reduce((acc, table) => {
-                    acc[table.id] = table.name;
-                    return acc;
-                }, {});
-                
-                const message = lonelyStudents
-                    .map(s => `${s.name} (at ${tableNames[s.tableId]})`)
-                    .join('\n');
-                
-                alert(`Warning: The following students are the only one of their gender at their table:\n\n${message}\n\nYou may want to move them manually.`);
-            } else if (!isAfterShuffle) {
-                alert("Gender check complete: No 'lonely' students found!");
-            }
-        }
-        
-        function checkSeparations() {
-            const activeClass = appState.classes[appState.activeClassId];
-            const separations = activeClass.separations || [];
-            if (separations.length === 0) return; 
-            
-            const assignments = activeClass.assignments;
-            
-            const studentLocations = {};
-            for (const seatId in assignments) {
-                const studentName = assignments[seatId];
-                if (!studentName) continue; // Skip empty seats
-                const tableId = seatId.split('-s')[0];
-                studentLocations[studentName] = tableId;
-            }
-            
-            const violations = [];
-            for (const pair of separations) {
-                const name1 = pair[0];
-                const name2 = pair[1];
-                
-                if (studentLocations[name1] && studentLocations[name1] === studentLocations[name2]) {
-                    violations.push({ name1, name2, tableId: studentLocations[name1] });
-                }
-            }
-            
-            if (violations.length > 0) {
-                const tableNames = appState.tables.reduce((acc, table) => {
-                    acc[table.id] = table.name;
-                    return acc;
-                }, {});
-                
-                const message = violations
-                    .map(v => `${v.name1} & ${v.name2} (at ${tableNames[v.tableId]})`)
-                    .join('\n');
-                
-                alert(`Warning: The following incompatible students are at the same table:\n\n${message}\n\nYou may want to move them manually.`);
-            }
-        }
-
-
-        // --- 8. INITIALIZATION ---
-        
-        // This is now synchronous, no 'main' async function
-        classSelector.addEventListener('change', handleClassChange);
-        editLayoutBtn.addEventListener('click', handleToggleEditMode); 
-        addFurnitureBtn.addEventListener('click', handleAddFurniture);
-        fitToScreenBtn.addEventListener('click', handleFitToScreen);
-        saveRosterBtn.addEventListener('click', handleSaveRoster);
-        manageRosterBtn.addEventListener('click', handleManageRoster); 
-        shuffleBtn.addEventListener('click', handleShuffle);
-        clearAssignmentsBtn.addEventListener('click', handleClearAssignments);
-        shareLinkBtn.addEventListener('click', handleShareLink); // Updated
-        resetAllBtn.addEventListener('click', handleResetAll); 
-        checkLonelyBtn.addEventListener('click', () => checkLonelyStudents(false));
-        
-        // Display Options Listeners
-        nameFormatSelect.addEventListener('change', handleNameFormatChange);
-        textSizeSlider.addEventListener('input', handleTextSizeChange);
-        colorByGenderCheck.addEventListener('change', handleColorByGenderChange);
-        
-        // Roster Modal Listeners
-        closeRosterModalBtn.addEventListener('click', closeRosterModal);
-        saveRosterManagerBtn.addEventListener('click', handleSaveRosterManager);
-        addSeparationBtn.addEventListener('click', handleAddSeparation);
-        separationList.addEventListener('click', handleRemoveSeparation); 
-        rosterManagerOverlay.addEventListener('click', (e) => {
-            if (e.target === rosterManagerOverlay) closeRosterModal();
-        });
-        
-        // First load and render
-        loadState();
-        render();
-        
-        // Add drag-and-drop import functionality
-        document.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-        });
-        
-        document.addEventListener('drop', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                const file = files[0];
-                if (file.name.endsWith('.json')) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        handleImportData(event.target.result);
-                    };
-                    reader.readAsText(file);
-                }
-            }
-        });
-
-    });
-    </script>
-</body>
-</html>
+            const currentTransform = window.getComputedStyle(room
