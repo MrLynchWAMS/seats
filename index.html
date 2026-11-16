@@ -4,13 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seating Chart Generator</title>
- <link rel="icon" type="image/svg+xml"
+    <link rel="icon" type="image/svg+xml"
 href='data:image/svg+xml;utf8,
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
   <path fill="%23ffffff" stroke="%23000000" stroke-width="1"
         d="M7 3h10v5h2a1 1 0 0 1 1 1v4h-2v8h-2v-8H8v8H6v-8H4V9a1 1 0 0 1 1-1h2V3zM9 8h6V5H9v3z"/>
 </svg>'>
-
     <style>
         /* --- 1. General Styles --- */
         :root {
@@ -59,7 +58,6 @@ href='data:image/svg+xml;utf8,
             flex-direction: column;
             height: 100vh;
         }
-
         /* --- 2. Header & Main Controls --- */
         header {
             background-color: var(--header-bg);
@@ -78,7 +76,6 @@ href='data:image/svg+xml;utf8,
             font-size: 1.5rem;
             color: var(--accent-color);
         }
-
         .controls-main {
             display: flex;
             align-items: center;
@@ -90,7 +87,6 @@ href='data:image/svg+xml;utf8,
             align-items: center;
             gap: 0.5rem; 
         }
-
         select, button {
             font-family: var(--font-family);
             font-size: 0.9rem;
@@ -111,7 +107,6 @@ href='data:image/svg+xml;utf8,
         button:hover {
             background-color: var(--accent-hover);
         }
-
         button.danger {
             background-color: var(--danger-color);
             border-color: var(--danger-color);
@@ -126,7 +121,6 @@ href='data:image/svg+xml;utf8,
             flex: 1; /* Take remaining height */
             overflow: hidden;
         }
-
         /* --- 4. Roster & Settings Panel --- */
         .panel-left {
             width: 300px;
@@ -167,7 +161,6 @@ href='data:image/svg+xml;utf8,
             gap: 0.5rem;
             margin-top: 0.5rem;
         }
-
         #roster-input {
             width: 100%;
             height: 150px; /* Reduced height */
@@ -225,7 +218,6 @@ href='data:image/svg+xml;utf8,
             background-color: var(--danger-color);
             color: #fff;
         }
-
         /* --- 5. Seating Chart Area --- */
         .room-container {
             flex: 1;
@@ -299,7 +291,6 @@ href='data:image/svg+xml;utf8,
             background-color: transparent;
             pointer-events: none; 
         }
-
         .seat-container {
             display: grid;
             gap: var(--chip-gap);
@@ -319,7 +310,6 @@ href='data:image/svg+xml;utf8,
         .table[data-table-id="t6"] .seat-container {
             grid-template-columns: 1fr 1fr 1fr;
         }
-
         .seat {
             border: 1px solid var(--border-color);
             border-radius: 6px;
@@ -520,8 +510,6 @@ href='data:image/svg+xml;utf8,
             display: block;
         }
         
-        /* Removed old individual feature IDs */
-
         /* --- 7. EDIT MODE STYLES --- */
         
         body.layout-edit-mode .table-header { cursor: grab; }
@@ -624,11 +612,23 @@ href='data:image/svg+xml;utf8,
             margin-bottom: 0.5rem;
         }
         #separation-list { margin-top: 0.5rem; }
+
+        /* --- Student View (180-degree perspective from Smartboard) --- */
+        #exit-student-view-btn { display: none; position: fixed; bottom: 12px; right: 12px; opacity: 0.15; z-index: 3000; }
+        #exit-student-view-btn:hover { opacity: 1; }
+        body.student-view #exit-student-view-btn { display: block; }
+        body.student-view .panel-left,
+        body.student-view header h1,
+        body.student-view .controls-main > :not(.control-group) { display: none; }
+        body.student-view .seat { pointer-events: none; }
+        body.student-view .seat.locked { border: 1px solid var(--border-color); font-weight: 500; color: inherit; }
+        body.student-view .table[data-used="false"] { visibility: hidden; } /* keeps mirror math stable */
+        body.student-view .seat-container { direction: rtl; transform: scaleY(-1); }
+        body.student-view .seat { direction: ltr; transform: scaleY(-1); }
         
     </style>
 </head>
 <body>
-
     <header>
         <h1>Seating Chart</h1>
         <div class="controls-main">
@@ -641,11 +641,11 @@ href='data:image/svg+xml;utf8,
             <button id="edit-layout-btn">Edit Layout</button>
             <button id="add-furniture-btn" style="display: none;">Add Furniture</button>
             <button id="fit-to-screen-btn">Fit to Screen</button>
+            <button id="student-view-btn">Student View</button>
             <button id="shuffle-btn">Shuffle Unlocked</button>
             <button id="clear-assignments-btn" class="danger">Clear All Seats</button>
         </div>
     </header>
-
     <div class="main-container">
         
         <aside class="panel-left">
@@ -697,16 +697,16 @@ Student C..."></textarea>
                 </div>
             </div>
 
-            <!-- MODIFIED: "Share" button, no Import -->
             <div class="panel-group data-ops-group">
                 <h2>App Data</h2>
                 <div class="data-ops-grid">
-                    <button id="share-link-btn">💾 Download Chart</button>
+                    <button id="share-link-btn">💾 Download Backup</button>
+                    <button id="load-file-btn">📂 Load Backup</button>
+                    <input type="file" id="load-file-input" accept=".json" style="display:none">
                 </div>
                 <button id="reset-all-btn" class="danger">Reset All Data</button>
             </div>
         </aside>
-
         <main class="room-container">
             <div id="room-layout">
                 <div id="room-features">
@@ -744,9 +744,10 @@ Student C..."></textarea>
         </div>
     </div>
 
+    <button id="exit-student-view-btn">Exit Student View</button>
+
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-
         // --- 1. STATE MANAGEMENT ---
         
         // Default colors for furniture types
@@ -761,6 +762,7 @@ Student C..."></textarea>
         let appState = {};
         let draggedStudent = null; 
         let saveTimeout; // For debouncing URL hash saves
+        let studentView = false; // intentionally not saved, so the app never reopens in student view
 
         const getInitialState = () => ({
             activeClassId: 'p1',
@@ -778,52 +780,32 @@ Student C..."></textarea>
                 'p8': { name: 'Period 8', roster: [], separations: [], assignments: {}, locked: [], tableSettings: {} },
             },
             tables: [
-                { id: 't1', name: 'Banneker', maxSeats: 4, x: 120, y: 100 },
-                { id: 't2', name: 'Einstein', maxSeats: 4, x: 120, y: 350 },
-                { id: 't3', name: 'Curie',    maxSeats: 5, x: 550, y: 100 },
-                { id: 't4', name: 'Hawking',  maxSeats: 5, x: 550, y: 300 },
-                { id: 't5', name: 'Ochoa',    maxSeats: 5, x: 550, y: 500 },
-                { id: 't6', name: 'Newton',   maxSeats: 5, x: 340, y: 400 },
+                { id: 't1', name: 'Banneker', maxSeats: 4, x: 645, y: 470 },
+                { id: 't2', name: 'Einstein', maxSeats: 4, x: 126, y: 466 },
+                { id: 't3', name: 'Curie',    maxSeats: 5, x: 85,  y: 30  },
+                { id: 't4', name: 'Hawking',  maxSeats: 5, x: 417, y: 22  },
+                { id: 't5', name: 'Ochoa',    maxSeats: 5, x: 742, y: 18  },
+                { id: 't6', name: 'Newton',   maxSeats: 5, x: 991, y: 258 },
             ],
             roomFeatures: {}
         });
 
-        // NEW: Load state from URL first, then localStorage
+        // Load state from whichever source (URL hash or localStorage) has the newer timestamp
         function loadState() {
             const initialState = getInitialState();
-            let loadedState = null;
-
-            // 1. Try to load from URL hash
-            const hash = window.location.hash.substring(1);
-            if (hash) {
-                try {
-                    const utf8String = atob(hash);
-                    const jsonState = decodeURIComponent(escape(utf8String));
-                    loadedState = JSON.parse(jsonState);
-                    // Do NOT save to localStorage - let the URL be the source of truth for shared links
-                } catch (e) {
-                    console.error("Failed to parse state from URL hash. Loading from localStorage.", e);
-                    loadedState = null; // Ensure fallback
-                }
-            }
-            
-            // 2. If URL load failed, try localStorage
-            if (!loadedState) {
-                const savedState = localStorage.getItem('seatingChartState');
-                if (savedState) {
-                    try {
-                        loadedState = JSON.parse(savedState);
-                    } catch (e) {
-                        console.error("Failed to parse state from localStorage. Resetting to default.", e);
-                        loadedState = initialState;
-                    }
-                } else {
-                    loadedState = initialState;
-                }
-            }
+            let fromHash = null, fromStorage = null;
+            try {
+                const h = window.location.hash.substring(1);
+                if (h) fromHash = JSON.parse(decodeURIComponent(escape(atob(h))));
+            } catch (e) { console.warn('Bad URL hash', e); }
+            try {
+                const s = localStorage.getItem('seatingChartState');
+                if (s) fromStorage = JSON.parse(s);
+            } catch (e) { console.warn('Bad localStorage', e); }
+            const loadedState = [fromHash, fromStorage].filter(Boolean)
+                .sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))[0] || initialState;
             
             appState = loadedState;
-
             // --- Data Migration (run on any loaded data) ---
             
             // 1. Migrate Classes
@@ -875,10 +857,9 @@ Student C..."></textarea>
             
             // Define default furniture with full properties
             const defaultFurniture = {
-                'windows': { id: 'windows', name: 'WINDOWS', type: 'windows', x: 20, y: 100, w: 60, h: 400, color: FEATURE_DEFAULT_COLORS.windows },
-                'desk': { id: 'desk', name: 'Teacher Desk', type: 'desk', x: 50, y: 550, w: 150, h: 60, color: FEATURE_DEFAULT_COLORS.desk },
-                'smartboard': { id: 'smartboard', name: 'Smartboard', type: 'smartboard', x: 250, y: 400, w: 150, h: 40, color: FEATURE_DEFAULT_COLORS.smartboard },
-                'door': { id: 'door', name: 'Door', type: 'door', x: 750, y: 500, w: 80, h: 120, color: FEATURE_DEFAULT_COLORS.door }
+                'windows': { id: 'windows', name: 'WINDOWS', type: 'windows', x: 0, y: 88, w: 56, h: 400, color: FEATURE_DEFAULT_COLORS.windows },
+                'desk': { id: 'desk', name: 'Teacher Desk', type: 'desk', x: 998, y: 582, w: 150, h: 60, color: FEATURE_DEFAULT_COLORS.desk },
+                'door': { id: 'door', name: 'Door', type: 'door', x: 1023, y: 2, w: 80, h: 120, color: FEATURE_DEFAULT_COLORS.door }
             };
             
             // Check if we need to migrate from old structure (just x/y) to new structure (id, name, type, x, y, w, h)
@@ -919,7 +900,6 @@ Student C..."></textarea>
                     feature.color = FEATURE_DEFAULT_COLORS[feature.type] || FEATURE_DEFAULT_COLORS.generic;
                 }
             }
-
             if (appState.isEditMode === undefined) {
                 appState.isEditMode = false;
             }
@@ -968,20 +948,19 @@ Student C..."></textarea>
                 }
             }
             
-            // 5. Finaly, update the URL to match the (potentially migrated) state
+            // 5. Finally, update the URL to match the (potentially migrated) state
             updateURLHash(true); // Force immediate update
         }
 
-        // NEW: Save to both localStorage and URL hash
+        // Save to both localStorage (with timestamp) and URL hash
         function saveState() {
-            // 1. Save to localStorage immediately
-            localStorage.setItem('seatingChartState', JSON.stringify(appState));
-            
-            // 2. Debounce the URL hash update
+            appState.savedAt = Date.now();
+            try { localStorage.setItem('seatingChartState', JSON.stringify(appState)); }
+            catch (e) { console.warn('localStorage save failed', e); }
             updateURLHash(false);
         }
 
-        // NEW: Function to update the URL hash
+        // Function to update the URL hash
         function updateURLHash(force = false) {
             if (saveTimeout) {
                 clearTimeout(saveTimeout);
@@ -998,14 +977,12 @@ Student C..."></textarea>
                     console.error("Error updating URL hash:", e);
                 }
             };
-
             if (force) {
                 updateAction();
             } else {
                 saveTimeout = setTimeout(updateAction, 500); // 0.5s debounce
             }
         }
-
         // --- 2. DOM ELEMENT SELECTORS ---
         
         const classSelector = document.getElementById('class-selector');
@@ -1020,7 +997,7 @@ Student C..."></textarea>
         const roomLayout = document.getElementById('room-layout');
         const roomFeaturesContainer = document.getElementById('room-features');
         const tableTogglesContainer = document.getElementById('table-toggles');
-        const shareLinkBtn = document.getElementById('share-link-btn'); // NEW
+        const shareLinkBtn = document.getElementById('share-link-btn');
         const resetAllBtn = document.getElementById('reset-all-btn'); 
         const checkLonelyBtn = document.getElementById('check-lonely-btn');
         
@@ -1091,7 +1068,7 @@ Student C..."></textarea>
         }
         
         function getGenderClass(studentName, activeClass) {
-            if (!appState.displayOptions.colorByGender) return '';
+            if (studentView || !appState.displayOptions.colorByGender) return '';
             
             const student = activeClass.roster.find(s => s.name === studentName);
             if (!student) return '';
@@ -1107,6 +1084,32 @@ Student C..."></textarea>
             textSizeValue.textContent = appState.displayOptions.textScale + '%';
         }
 
+        // --- STUDENT VIEW (180-DEGREE MIRROR MODE) FUNCTIONS ---
+
+        function applyMirror() {
+            if (!studentView) return;
+            const els = [...roomLayout.querySelectorAll('.table, .room-feature')];
+            if (!els.length) return;
+            const maxRight = Math.max(...els.map(el => el.offsetLeft + el.offsetWidth));
+            const maxBottom = Math.max(...els.map(el => el.offsetTop + el.offsetHeight));
+            els.forEach(el => {
+                el.style.left = (maxRight - el.offsetLeft - el.offsetWidth) + 'px';
+                el.style.top = (maxBottom - el.offsetTop - el.offsetHeight) + 'px';
+            });
+        }
+
+        function refitStudentView() {
+            roomLayout.style.transform = 'none';
+            fitToScreenBtn.textContent = 'Fit to Screen';
+            if (studentView) handleFitToScreen();
+        }
+
+        function setStudentView(on) {
+            studentView = on;
+            if (on) appState.isEditMode = false;
+            render();
+            refitStudentView();
+        }
 
         // --- 3. RENDERING FUNCTIONS ---
         
@@ -1119,6 +1122,7 @@ Student C..."></textarea>
             const activeClass = appState.classes[appState.activeClassId];
             
             document.body.classList.toggle('layout-edit-mode', appState.isEditMode);
+            document.body.classList.toggle('student-view', studentView);
             editLayoutBtn.textContent = appState.isEditMode ? 'Save Layout' : 'Edit Layout';
             editLayoutBtn.classList.toggle('danger', appState.isEditMode);
             
@@ -1128,7 +1132,6 @@ Student C..."></textarea>
             // Update Fit to Screen button text based on current zoom state
             const currentZoom = getRoomZoom();
             fitToScreenBtn.textContent = currentZoom !== 1.0 ? 'Reset Zoom' : 'Fit to Screen';
-
             shuffleBtn.disabled = appState.isEditMode;
             clearAssignmentsBtn.disabled = appState.isEditMode;
             checkLonelyBtn.disabled = appState.isEditMode;
@@ -1144,9 +1147,9 @@ Student C..."></textarea>
             renderRoom();
             renderRoomFeatures(); 
             renderTableToggles();
+            applyMirror();
             updateRoomLayoutSize();
         }
-
         function renderClassSelector() {
             classSelector.innerHTML = ''; 
             const classList = getInitialState().classes;
@@ -1159,7 +1162,6 @@ Student C..."></textarea>
             }
             classSelector.value = appState.activeClassId;
         }
-
         function renderRoom() {
             // Clear only tables, not the room-features container
             const tables = roomLayout.querySelectorAll('.table');
@@ -1203,10 +1205,8 @@ Student C..."></textarea>
                 
                 tableHeader.appendChild(nameInput);
                 tableEl.appendChild(tableHeader);
-
                 addTableDragListeners(tableEl, tableHeader, table);
                 attachTableResizeObserver(tableEl, table.id);
-
                 const seatContainer = document.createElement('div');
                 seatContainer.className = 'seat-container';
                 
@@ -1382,8 +1382,6 @@ Student C..."></textarea>
             let maxY = 700; // minimum height
             
             tables.forEach(table => {
-                const rect = table.getBoundingClientRect();
-                const container = document.querySelector('.room-container').getBoundingClientRect();
                 const right = table.offsetLeft + table.offsetWidth;
                 const bottom = table.offsetTop + table.offsetHeight;
                 
@@ -1428,7 +1426,7 @@ Student C..."></textarea>
                 const scaleY = containerHeight / layoutHeight;
                 
                 // Use the smaller scale to ensure everything fits
-                const scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
+                const scale = Math.min(scaleX, scaleY, studentView ? 3 : 1);
                 
                 // Apply transform
                 roomLayout.style.transform = `scale(${scale})`;
@@ -1438,13 +1436,13 @@ Student C..."></textarea>
                 roomContainer.scrollTo(0, 0);
             }
         }
-
         // --- 4. EVENT HANDLERS ---
         
         function handleClassChange(e) {
             appState.activeClassId = e.target.value;
             saveState(); 
             render();
+            if (studentView) refitStudentView();
         }
         
         function handleToggleEditMode() {
@@ -1468,7 +1466,6 @@ Student C..."></textarea>
                 e.target.value = appState.tables.find(t => t.id === tableId).name;
             }
         }
-
         function handleSaveRoster() {
             const activeClass = appState.classes[appState.activeClassId];
             const newNames = rosterInput.value
@@ -1564,14 +1561,12 @@ Student C..."></textarea>
         }
         
         // --- 5. CORE LOGIC: SHUFFLE, LOCK, DRAG/DROP ---
-
         function shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [array[i], array[j]] = [array[j], array[i]];
             }
         }
-
         function handleShuffle() {
             if (appState.isEditMode) return; 
             
@@ -1581,7 +1576,6 @@ Student C..."></textarea>
             
             const studentsToShuffle = activeClass.roster.filter(student => !lockedStudents.includes(student.name));
             shuffleArray(studentsToShuffle);
-
             const seatFillQueue = [];
             const activeTables = appState.tables.filter(t => activeClass.tableSettings[t.id].used);
             
@@ -1590,7 +1584,6 @@ Student C..."></textarea>
                 const tableMax = activeClass.tableSettings[t.id].maxSeats;
                 if (tableMax > maxDepth) maxDepth = tableMax;
             });
-
             for (let i = 1; i <= maxDepth; i++) {
                 shuffleArray(activeTables); 
                 for (const table of activeTables) {
@@ -1606,7 +1599,6 @@ Student C..."></textarea>
                     }
                 }
             }
-
             for (const seatId in assignments) {
                 const studentName = assignments[seatId];
                 if (studentsToShuffle.some(s => s.name === studentName)) {
@@ -1624,7 +1616,6 @@ Student C..."></textarea>
             checkLonelyStudents(true); 
             render();
         }
-
         function handleClearAssignments() {
             if (appState.isEditMode) return;
             if (!confirm('Are you sure you want to clear all assignments for this class? (Locked students will be unlocked and unassigned).')) {
@@ -1637,7 +1628,6 @@ Student C..."></textarea>
             saveState();
             render();
         }
-
         function addSeatListeners(seatEl) {
             const studentName = seatEl.dataset.studentName;
             
@@ -1657,7 +1647,6 @@ Student C..."></textarea>
                     render(); 
                 });
             }
-
             seatEl.addEventListener('dragstart', (e) => {
                 if (appState.isEditMode) { e.preventDefault(); return; } 
                 
@@ -1670,7 +1659,6 @@ Student C..."></textarea>
                     e.preventDefault(); 
                 }
             });
-
             seatEl.addEventListener('dragend', (e) => {
                 if (appState.isEditMode) return;
                 draggedStudent = null;
@@ -1719,7 +1707,6 @@ Student C..."></textarea>
         function addTableDragListeners(tableEl, tableHeaderEl, table) {
             let offsetX, offsetY, isDragging = false;
             const room = document.querySelector('.room-container');
-
             function onMouseDown(e) {
                 if (!appState.isEditMode || e.button !== 0) return; 
                 
@@ -1729,30 +1716,24 @@ Student C..."></textarea>
                 const rect = tableEl.getBoundingClientRect();
                 offsetX = e.clientX - rect.left;
                 offsetY = e.clientY - rect.top;
-
                 e.preventDefault();
                 
                 document.addEventListener('mousemove', onMouseMove);
                 document.addEventListener('mouseup', onMouseUp);
             }
-
             function onMouseMove(e) {
                 if (!isDragging) return;
                 
                 const roomRect = room.getBoundingClientRect();
-                let newX = e.clientX - roomRect.left - offsetX;
-                let newY = e.clientY - roomRect.top - offsetY;
-                
-                newX = Math.max(0, Math.min(newX, roomRect.width - tableEl.offsetWidth));
-                newY = Math.max(0, Math.min(newY, roomRect.height - tableEl.offsetHeight));
+                const zoom = getRoomZoom();
+                let newX = Math.max(0, (e.clientX - roomRect.left) / zoom + room.scrollLeft / zoom - offsetX / zoom);
+                let newY = Math.max(0, (e.clientY - roomRect.top) / zoom + room.scrollTop / zoom - offsetY / zoom);
                 
                 table.x = newX;
                 table.y = newY;
-
                 tableEl.style.left = newX + 'px';
                 tableEl.style.top = newY + 'px';
             }
-
             function onMouseUp() {
                 if (!isDragging) return;
                 isDragging = false;
@@ -1763,14 +1744,10 @@ Student C..."></textarea>
                 
                 saveState(); 
             }
-
             tableHeaderEl.addEventListener('mousedown', onMouseDown);
         }
-
         function makeFeatureDraggable(featureEl, featureId) {
             let startX, startY, startFeatureX, startFeatureY, isDragging = false;
-            const room = document.querySelector('.room-container');
-
             function onMouseDown(e) {
                 if (!appState.isEditMode || e.button !== 0) return;
                 
@@ -1789,13 +1766,11 @@ Student C..."></textarea>
                 startY = e.clientY;
                 startFeatureX = feature.x;
                 startFeatureY = feature.y;
-
                 e.preventDefault();
                 
                 document.addEventListener('mousemove', onMouseMove);
                 document.addEventListener('mouseup', onMouseUp);
             }
-
             function onMouseMove(e) {
                 if (!isDragging) return;
                 
@@ -1819,11 +1794,9 @@ Student C..."></textarea>
                 const roundedY = Math.round(newY);
                 appState.roomFeatures[featureId].x = roundedX;
                 appState.roomFeatures[featureId].y = roundedY;
-
                 featureEl.style.left = roundedX + 'px';
                 featureEl.style.top = roundedY + 'px';
             }
-
             function onMouseUp() {
                 if (!isDragging) return;
                 isDragging = false;
@@ -1834,7 +1807,6 @@ Student C..."></textarea>
                 
                 saveState(); 
             }
-
             featureEl.addEventListener('mousedown', onMouseDown);
         }
         
@@ -1850,9 +1822,6 @@ Student C..."></textarea>
                 clearTimeout(resizeTimeout);
                 resizeTimeout = setTimeout(() => {
                     for (const entry of entries) {
-                        // Get the current zoom to normalize dimensions
-                        const zoom = getRoomZoom();
-                        
                         // Use offsetWidth/offsetHeight which gives actual pixel dimensions
                         // Since the parent (#room-layout) has the transform, the children's
                         // offsetWidth/Height are already in logical (unscaled) coordinates
@@ -1918,7 +1887,6 @@ Student C..."></textarea>
             
             resizeObserver.observe(tableEl);
         }
-
         function handleAddFurniture() {
             // Generate a unique ID for the new furniture
             let id = 1;
@@ -1959,19 +1927,20 @@ Student C..."></textarea>
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
-            alert('Seating chart downloaded! Share this file with others.\n\nTo load: Click "Reset All" button, then drag the JSON file into the browser window.');
+            alert('Backup downloaded. To restore it, use "Load Backup" or drag the file into the window.');
         }
         
         function handleImportData(jsonString) {
             try {
-                const importedState = JSON.parse(jsonString);
-                appState = importedState;
-                saveState();
-                render();
-                alert('Seating chart imported successfully!');
+                const s = JSON.parse(jsonString);
+                if (!s.classes || !s.tables) throw new Error('Not a seating chart file');
+                s.savedAt = Date.now();
+                localStorage.setItem('seatingChartState', JSON.stringify(s));
+                window.history.replaceState(null, '', window.location.pathname + window.location.search);
+                window.location.reload();
             } catch (e) {
-                console.error('Failed to import data:', e);
-                alert('Failed to import seating chart. The file may be corrupted.');
+                console.error(e);
+                alert('Failed to import. The file may be corrupted or not a seating chart backup.');
             }
         }
         
@@ -2201,11 +2170,8 @@ Student C..."></textarea>
                 alert(`Warning: The following incompatible students are at the same table:\n\n${message}\n\nYou may want to move them manually.`);
             }
         }
-
-
         // --- 8. INITIALIZATION ---
         
-        // This is now synchronous, no 'main' async function
         classSelector.addEventListener('change', handleClassChange);
         editLayoutBtn.addEventListener('click', handleToggleEditMode); 
         addFurnitureBtn.addEventListener('click', handleAddFurniture);
@@ -2214,9 +2180,20 @@ Student C..."></textarea>
         manageRosterBtn.addEventListener('click', handleManageRoster); 
         shuffleBtn.addEventListener('click', handleShuffle);
         clearAssignmentsBtn.addEventListener('click', handleClearAssignments);
-        shareLinkBtn.addEventListener('click', handleShareLink); // Updated
+        shareLinkBtn.addEventListener('click', handleShareLink);
+        document.getElementById('load-file-btn').addEventListener('click', () => document.getElementById('load-file-input').click());
+        document.getElementById('load-file-input').addEventListener('change', e => {
+            const f = e.target.files[0];
+            if (f) { const r = new FileReader(); r.onload = ev => handleImportData(ev.target.result); r.readAsText(f); }
+        });
         resetAllBtn.addEventListener('click', handleResetAll); 
         checkLonelyBtn.addEventListener('click', () => checkLonelyStudents(false));
+
+        // Student View Listeners
+        document.getElementById('student-view-btn').addEventListener('click', () => setStudentView(true));
+        document.getElementById('exit-student-view-btn').addEventListener('click', () => setStudentView(false));
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && studentView) setStudentView(false); });
+        window.addEventListener('resize', () => { if (studentView) refitStudentView(); });
         
         // Display Options Listeners
         nameFormatSelect.addEventListener('change', handleNameFormatChange);
@@ -2258,7 +2235,6 @@ Student C..."></textarea>
                 }
             }
         });
-
     });
     </script>
 </body>
